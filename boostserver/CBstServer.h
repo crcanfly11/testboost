@@ -1,12 +1,15 @@
 #ifndef _CBstServer_h_
 #define _CBstServer_h_
 
-#include <boost\asio.hpp>
-#include <boost\bind.hpp>
-#include <boost\shared_ptr.hpp>
+//mac 路径只能用 ‘/’符号
+//mac 中boost::system;error_conde 即使成功返回 error.message()为 undefined error. error.value()为0
+
+#include <boost/asio.hpp>
+#include <boost/bind.hpp>
+#include <boost/shared_ptr.hpp>
 
 #include <ostream>
-
+//asdfjcr
 using namespace std;
 using namespace boost::asio;
 
