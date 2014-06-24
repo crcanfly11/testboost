@@ -12,7 +12,7 @@
 //asdfjcr
 using namespace std;
 using namespace boost::asio;
-
+//asdfjcr
 class CBstServer
 {
 	typedef boost::shared_ptr<ip::tcp::socket> socket_type;
