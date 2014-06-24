@@ -12,7 +12,7 @@ void CBstServer::start()
 
 void CBstServer::connect_handler(socket_type socket, boost::system::error_code error)
 {
-	cout<< "connect_handler error message:"<< error.message()<< endl;
+	//cout<< "connect_handler error message:"<< error.message()<< endl;
 	
 	if(error) return;
 
@@ -26,10 +26,12 @@ void CBstServer::connect_handler(socket_type socket, boost::system::error_code e
 
 void CBstServer::write_handle(socket_type socket, buf_type buf, boost::system::error_code error)
 {
-	cout<< "write_handle error mesage:"<< error.message()<<endl;
-
-	if(error) 
+	//cout<< "write_handle error mesage:"<< error.message()<<endl;
+    
+	if(error) {
 		cout<< "Failure."<< endl;
-	else 
-		cout<< "Success."<< endl;
+    }
+	else {
+		cout<< "Success. send message is "<< *(buf)<<endl;
+    }
 }
