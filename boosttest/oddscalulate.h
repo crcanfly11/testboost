@@ -1,8 +1,6 @@
 #ifndef __odds__oddscalulate__
 #define __odds__oddscalulate__
 
-#include <iostream>
-
 #include <boost/bind.hpp>
 
 #include <iostream>
@@ -12,7 +10,9 @@
 
 using namespace std;
 
+enum unit_price { lottery = 2 };
 enum team_odd_type { max_odds_type = 3 };
+enum play_mode { none_modem, portion_mode, whole_mode, manual_mode };
 
 //-----------------------------------------------------------------------
 
@@ -39,49 +39,63 @@ public:
 
 //-----------------------------------------------------------------------
 
+typedef vector<fixtures_base_odds> base_odds_vector;
+
+//-----------------------------------------------------------------------
+
 class forecas_result
 {
 	double odds_;
-	unsigned short multiple_;	 //bei shu
-	double yield_;			     //Unit of Measure %
 	char result_msg_[10];
+
+	unsigned short multiple_;	 //bei shu
+	double income_;
+	double yield_;			     //Unit of Measure %
+	double total_cost_;
+	double net_income_;
     
 public:
 	forecas_result(double odds, const char* result_msg);
     
-	void set_result_multiple(unsigned short multiple) { multiple_ = multiple; }
+	void set_result_multiple(unsigned short multiple);
+	void set_total_cost(double tcost);
+	void clear_dynamic_data();
+
 	unsigned short get_result_multiple() const { return multiple_; }
 	double get_result_odds() const { return odds_; }
 	double get_result_yield() const { return yield_; }
+	double get_result_income() const { return income_; }
+	double get_net_income() const { return net_income_; }
+	double get_total_cost() const { return total_cost_; }
 	const char* get_result_msg() const { return result_msg_; }
 };
 
 //-----------------------------------------------------------------------
 
-class position
-{
-	char earnings_range[100];   //range of yield
-	double cost;
-};
+typedef map<unsigned int, forecas_result> forecas_result_map;
+typedef pair<unsigned int, forecas_result> forecas_result_pair;
 
 //-----------------------------------------------------------------------
+
+class position;
+class regulator;
 
 class organizer
 {
 	double htwin_, sh_, atwin_;
 	char htname_[20], atname_[20], tmp_[100], result_[5];
     
-	typedef vector<fixtures_base_odds> base_odds_vector;
 	base_odds_vector base_odds_;
-    
-	typedef map<unsigned int, forecas_result> forecas_result_map;
 	forecas_result_map forecas_results_;
-    
-	typedef pair<unsigned int, forecas_result> forecas_result_pair;
 
+	position* position_;
+	regulator* regulator_;
 public:
     organizer();
     
+	forecas_result_map& get_result_map() { return forecas_results_; }
+	position* get_position() { return position_; }
+
 private:
     void init();
     void forecas_calculate(base_odds_vector::iterator begin, base_odds_vector::iterator end);
@@ -90,6 +104,54 @@ private:
 	const char* get_result_flag(int index);
 
 	void print(forecas_result_pair rpair);
+	void print_result(forecas_result_pair rpair);
+};
+
+//-----------------------------------------------------------------------
+
+class position
+{
+	char earnings_range_[100];   //range of yield
+	double cost_;
+
+	organizer* organizer_;
+
+public:
+	position(organizer* org);
+
+	void refresh();
+
+	double get_cost() { return cost_; }
+	const char* get_earnings_range() { return earnings_range_; }
+
+	void add_someone_position(unsigned int index);
+
+private:
+	void total_cost(forecas_result_pair rpair);
+	void set_result_cost(forecas_result_pair rpair);
+};
+
+//-----------------------------------------------------------------------
+
+class regulator
+{
+	double adjusted_income_;
+	double adjusted_yield_;
+
+	play_mode mode_;
+	organizer* organizer_;
+
+public:
+	regulator(organizer* org);
+
+	void set_adjusted_min_income(double min_income);
+	void set_adjusted_min_yield(double min_yield);
+	void set_play_mode(play_mode mode);
+
+private:
+	void init_position();
+	void init_results(forecas_result_pair rpair);
+	void add_all_position(forecas_result_pair rpair);
 };
 
 //-----------------------------------------------------------------------

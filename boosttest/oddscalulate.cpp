@@ -20,10 +20,35 @@ double fixtures_base_odds::operator[] (int index)
 
 //-----------------------------------------------------------------------
 
-forecas_result::forecas_result(double odds, const char* result_msg) : odds_(odds), multiple_(0)
+forecas_result::forecas_result(double odds, const char* result_msg) : 
+	odds_(odds), multiple_(0), income_(0), yield_(0), total_cost_(0)
 {
 	strcpy_s(result_msg_, sizeof(result_msg_), result_msg);
-	yield_ = (odds - 1)*100;
+	//yield_ = (odds - 1)*100;
+};
+
+void forecas_result::set_result_multiple(unsigned short multiple)
+{ 
+	multiple_ = multiple; 
+
+	if(multiple_) income_ = lottery*multiple_*odds_;
+};
+
+void forecas_result::set_total_cost(double tcost)
+{
+	if(tcost == 0) return;
+
+	total_cost_ = tcost;
+	net_income_ = income_ - total_cost_;
+	yield_ = (net_income_/total_cost_)*100;  
+};
+
+void forecas_result::clear_dynamic_data()
+{
+	multiple_ = 0;	
+	total_cost_ = 0;
+	net_income_ = 0;
+	yield_ = 0;  
 };
 
 //-----------------------------------------------------------------------
@@ -67,9 +92,22 @@ void organizer::init()
     forecas_calculate(base_odds_.begin(),base_odds_.end());
 
 	cout<< "every case of results."<< endl;
-	for_each(forecas_results_.begin(), forecas_results_.end(), boost::bind(&organizer::print, this, _1));
+	for_each(forecas_results_.begin(), forecas_results_.end(), 
+		boost::bind(&organizer::print, this, _1));
 
 	cout<< "How to buy? all in without loss or buy Specify combination."<< endl;
+	//xia zhus
+
+	position_ = new position(this);
+	regulator_ = new regulator(this);
+
+	regulator_->set_play_mode(whole_mode);
+	regulator_->set_adjusted_min_income(0);
+
+	cout<< "-----------------------------------------"<< endl;
+	for_each(forecas_results_.begin(), forecas_results_.end(), 
+		boost::bind(&organizer::print_result, this, _1));
+
 
 };
 
@@ -78,12 +116,20 @@ void organizer::print(forecas_result_pair rpair)
 	std::cout<< rpair.first<< ". "<<rpair.second.get_result_msg()<< ": "<< rpair.second.get_result_odds()<< endl;
 };
 
+void organizer::print_result(forecas_result_pair rpair)
+{
+	std::cout<< rpair.first<< ". "<< rpair.second.get_result_msg()<< ": "<< rpair.second.get_result_odds()<< 
+		" multiple:"<< rpair.second.get_result_multiple()<< " net income:"<< rpair.second.get_net_income()<<
+		" total cost:"<< rpair.second.get_total_cost()<< " yield:"<< rpair.second.get_result_yield()<< endl;
+};
+
 void organizer::forecas_calculate(base_odds_vector::iterator begin, base_odds_vector::iterator end)
 {
 	if(begin == end) return;
 
 	base_odds_vector::iterator second = begin + 1;    
-    for_each(second, end, boost::bind(&organizer::set_forecas_result_map, this, *begin, _1));
+    for_each(second, end, 
+		boost::bind(&organizer::set_forecas_result_map, this, *begin, _1));
     
     return forecas_calculate(second, end);
 };
@@ -121,6 +167,134 @@ const char* organizer::get_result_flag(int index)
 	default:
 		return "N";
 	}
+};
+
+//-----------------------------------------------------------------------
+
+position::position(organizer* org) : 
+	cost_(0), organizer_(org)
+{
+	//refresh();
+};
+
+void position::refresh() 
+{
+	cost_ = 0;
+
+	memset(earnings_range_, 0, sizeof(earnings_range_));
+	strcpy_s(earnings_range_, "The earnings range:");
+
+	for_each(organizer_->get_result_map().begin(), organizer_->get_result_map().end(), 
+		boost::bind(&position::total_cost, this, _1));
+
+	for_each(organizer_->get_result_map().begin(), organizer_->get_result_map().end(), 
+		boost::bind(&position::set_result_cost, this, _1));
+
+	//boost::bind Ç¶Ì×
+	//for_each(organizer_->get_result_map().begin(), organizer_->get_result_map().end(), 
+	//	boost::bind(&forecas_result::set_total_cost, this, 
+	//		boost::bind(&forecas_result_pair::second, _1)));
+};
+
+void position::total_cost(forecas_result_pair rpair)
+{
+	if(rpair.second.get_result_multiple() == 0) return;
+
+	cost_ += rpair.second.get_result_multiple() * lottery * rpair.second.get_result_odds();
+};
+
+void position::set_result_cost(forecas_result_pair rpair)
+{
+	rpair.second.set_total_cost(cost_);
+};
+
+void position::add_someone_position(unsigned int index)
+{
+   forecas_result_map::iterator iter = organizer_->get_result_map().find(index);
+
+   if(iter == organizer_->get_result_map().end()) 
+	   return ;
+
+   iter->second.set_result_multiple(iter->second.get_result_multiple()+1);
+
+   refresh();	
+};
+
+//-----------------------------------------------------------------------
+
+regulator::regulator(organizer* org) : 
+	adjusted_income_(0), adjusted_yield_(0), organizer_(org), mode_(none_modem)
+{	
+};
+
+void regulator::set_adjusted_min_income(double min_income)
+{
+	adjusted_income_ = min_income;
+
+	while(true) {
+		forecas_result_map::iterator iter = organizer_->get_result_map().begin();
+		for(iter; iter != organizer_->get_result_map().end(); ++iter) {
+			if(iter->second.get_net_income() < adjusted_income_) {
+				int multiple = (int)(organizer_->get_position()->get_cost()/lottery) + 1;
+				iter->second.set_result_multiple(multiple);
+				organizer_->get_position()->refresh();
+				break;
+			}			
+		}
+		break;
+	}
+};
+
+void regulator::set_adjusted_min_yield(double min_yield)
+{
+	adjusted_yield_ = min_yield;
+
+	while(true) {
+		forecas_result_map::iterator iter = organizer_->get_result_map().begin();
+		for(iter; iter != organizer_->get_result_map().end(); ++iter) {
+			if(iter->second.get_net_income() < adjusted_yield_) {
+				int multiple = (int)(organizer_->get_position()->get_cost()/lottery) + 1;
+				iter->second.set_result_multiple(multiple);
+				organizer_->get_position()->refresh();
+				break;
+			}			
+		}
+		break;
+	}
+};
+
+void regulator::set_play_mode(play_mode mode)
+{
+	forecas_result_map::iterator iter = organizer_->get_result_map().begin();
+	double odd = iter->second.get_result_odds();
+
+	for_each(organizer_->get_result_map().begin(), organizer_->get_result_map().end(), 
+		boost::bind(&regulator::init_results, this, _1));
+
+	if(mode == whole_mode)
+		init_position();
+	else if(mode == portion_mode)
+		;//init_position();
+	else if(mode == manual_mode)
+		;//init_position();
+};
+
+void regulator::init_position()
+{
+	for_each(organizer_->get_result_map().begin(), organizer_->get_result_map().end(), 
+		boost::bind(&regulator::add_all_position, this, _1));		
+
+	organizer_->get_position()->refresh();
+};
+
+void regulator::add_all_position(forecas_result_pair rpair)
+{
+	rpair.second.set_result_multiple(1);
+};
+
+void regulator::init_results(forecas_result_pair rpair)
+{
+	rpair.second.clear_dynamic_data();
 };
 
 //-----------------------------------------------------------------------
