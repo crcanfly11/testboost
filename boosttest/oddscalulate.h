@@ -10,7 +10,7 @@
 
 using namespace std;
 
-enum unit_price { lottery = 2 };
+enum unit_price { lottery = 2, max_total_cost = 10000 };
 enum team_odd_type { max_odds_type = 3 };
 enum play_mode { none_modem, portion_mode, whole_mode, manual_mode };
 
@@ -73,6 +73,7 @@ public:
 //-----------------------------------------------------------------------
 
 typedef map<unsigned int, forecas_result> forecas_result_map;
+//extern forecas_result_map forecas_results_map_;
 typedef pair<unsigned int, forecas_result> forecas_result_pair;
 
 //-----------------------------------------------------------------------
@@ -93,7 +94,7 @@ class organizer
 public:
     organizer();
     
-	forecas_result_map& get_result_map() { return forecas_results_; }
+	forecas_result_map* get_result_map() { return &forecas_results_; }
 	position* get_position() { return position_; }
 
 private:
@@ -101,7 +102,6 @@ private:
     void forecas_calculate(base_odds_vector::iterator begin, base_odds_vector::iterator end);
     void set_forecas_result_map(fixtures_base_odds first, fixtures_base_odds second);
 	void result_msg(int first, int second);
-	const char* get_result_flag(int index);
 
 	void print(forecas_result_pair rpair);
 	void print_result(forecas_result_pair rpair);
@@ -113,6 +113,7 @@ class position
 {
 	char earnings_range_[100];   //range of yield
 	double cost_;
+	int real_size_;
 
 	organizer* organizer_;
 
@@ -123,7 +124,8 @@ public:
 
 	double get_cost() { return cost_; }
 	const char* get_earnings_range() { return earnings_range_; }
-
+	void set_real_size(int real_size_) { real_size_ = real_size_; }
+	int get_real_size() const { return real_size_; }
 	void add_someone_position(unsigned int index);
 
 private:
@@ -151,7 +153,8 @@ public:
 private:
 	void init_position();
 	void init_results(forecas_result_pair rpair);
-	void add_all_position(forecas_result_pair rpair);
+	void add_all_position(forecas_result_pair& rpair);
+	void adjust_positions(double value);
 };
 
 //-----------------------------------------------------------------------
