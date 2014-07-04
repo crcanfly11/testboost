@@ -14,6 +14,12 @@ enum unit_price { lottery = 2, max_total_cost = 10000 };
 enum team_odd_type { max_odds_type = 3 };
 enum play_mode { none_modem, portion_mode, whole_mode, manual_mode };
 
+//需要改进的部分
+//strcpy_s 在mac上 不兼容
+//boost::bind 嵌套用法
+//for_each boost::bind 赋值 异常
+//与或模式的 状态表示
+
 //-----------------------------------------------------------------------
 
 class fixtures_base_odds
