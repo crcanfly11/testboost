@@ -7,18 +7,14 @@
 #include <vector>
 #include <map>
 #include <algorithm>
+#include <iomanip>
+#include <iostream>
 
 using namespace std;
 
 enum unit_price { lottery = 2, max_total_cost = 10000 };
 enum team_odd_type { max_odds_type = 3 };
 enum play_mode { none_modem, portion_mode, whole_mode, manual_mode };
-
-//需要改进的部分
-//strcpy_s 在mac上 不兼容
-//boost::bind 嵌套用法
-//for_each boost::bind 赋值 异常
-//与或模式的 状态表示
 
 //-----------------------------------------------------------------------
 
@@ -130,13 +126,14 @@ public:
 
 	double get_cost() { return cost_; }
 	const char* get_earnings_range() { return earnings_range_; }
-	void set_real_size(int real_size_) { real_size_ = real_size_; }
+	void set_real_size(int rsize) { real_size_ = rsize; }
 	int get_real_size() const { return real_size_; }
 	void add_someone_position(unsigned int index);
 
 private:
 	void total_cost(forecas_result_pair rpair);
 	void set_result_cost(forecas_result_pair rpair);
+	void print();
 };
 
 //-----------------------------------------------------------------------
@@ -159,6 +156,7 @@ public:
 private:
 	void init_position();
 	void init_results(forecas_result_pair rpair);
+	void hedge_positions();
 	void add_all_position(forecas_result_pair& rpair);
 	void adjust_positions(double value);
 };
