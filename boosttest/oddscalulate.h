@@ -12,9 +12,10 @@
 
 using namespace std;
 
-enum unit_price { lottery = 2, max_total_cost = 10000 };
+enum unit_price { lottery = 2, max_total_cost = 100000 };
 enum team_odd_type { max_odds_type = 3 };
 enum play_mode { none_modem, portion_mode, whole_mode, manual_mode };
+enum result_type { host_win = 0x01, shake_hand = 0x10, away_win = 0x100,  };
 
 //-----------------------------------------------------------------------
 
@@ -55,12 +56,13 @@ class forecas_result
 	double yield_;			     //Unit of Measure %
 	double total_cost_;
 	double net_income_;
-    
+    short flag_;
 public:
 	forecas_result(double odds, const char* result_msg);
     
 	void set_result_multiple(unsigned short multiple);
 	void set_total_cost(double tcost);
+	void set_flag(short type) { flag_ |= type; }
 	void clear_dynamic_data();
 
 	unsigned short get_result_multiple() const { return multiple_; }
@@ -70,6 +72,7 @@ public:
 	double get_net_income() const { return net_income_; }
 	double get_total_cost() const { return total_cost_; }
 	const char* get_result_msg() const { return result_msg_; }
+	short get_flag() const { return flag_; }
 };
 
 //-----------------------------------------------------------------------
@@ -87,7 +90,8 @@ class organizer
 {
 	double htwin_, sh_, atwin_;
 	char htname_[20], atname_[20], tmp_[100], result_[5];
-    
+    short flag_;
+
 	base_odds_vector base_odds_;
 	forecas_result_map forecas_results_;
 
@@ -99,14 +103,17 @@ public:
 	forecas_result_map* get_result_map() { return &forecas_results_; }
 	position* get_position() { return position_; }
 
+	void print();
+	void print(forecas_result_pair rpair);
+
 private:
     void init();
     void forecas_calculate(base_odds_vector::iterator begin, base_odds_vector::iterator end);
     void set_forecas_result_map(fixtures_base_odds first, fixtures_base_odds second);
 	void result_msg(int first, int second);
-
-	void print(forecas_result_pair rpair);
 	void print_result(forecas_result_pair rpair);
+	const char* msg_type(int index);
+	short flag_type(int index);
 };
 
 //-----------------------------------------------------------------------
@@ -128,12 +135,11 @@ public:
 	const char* get_earnings_range() { return earnings_range_; }
 	void set_real_size(int rsize) { real_size_ = rsize; }
 	int get_real_size() const { return real_size_; }
-	void add_someone_position(unsigned int index);
+	int add_someone_position(unsigned int index);
 
 private:
 	void total_cost(forecas_result_pair rpair);
 	void set_result_cost(forecas_result_pair rpair);
-	void print();
 };
 
 //-----------------------------------------------------------------------
