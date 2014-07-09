@@ -49,6 +49,7 @@ void forecas_result::clear_dynamic_data()
 	total_cost_ = 0;
 	net_income_ = 0;
 	yield_ = 0;  
+	income_ = 0;
 };
 
 //-----------------------------------------------------------------------
@@ -471,8 +472,12 @@ void regulator::adjust_positions(double value)
 
 void regulator::set_play_mode(play_mode mode)
 {
-	for_each(organizer_->get_result_map()->begin(), organizer_->get_result_map()->end(), 
-		boost::bind(&regulator::init_results, this, _1));
+	//for_each(organizer_->get_result_map()->begin(), organizer_->get_result_map()->end(), 
+	//	boost::bind(&regulator::init_results, this, _1));
+	forecas_result_map::iterator iter_clear = organizer_->get_result_map()->begin();
+	for(iter_clear;iter_clear != organizer_->get_result_map()->end();++iter_clear){
+		iter_clear->second.clear_dynamic_data();
+	}
  
 	mode_ = mode;
 	init_position();
