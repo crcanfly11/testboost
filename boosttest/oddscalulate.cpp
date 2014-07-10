@@ -27,6 +27,19 @@ forecas_result::forecas_result(double odds, const char* result_msg) :
 	//yield_ = (odds - 1)*100;
 };
 
+forecas_result::forecas_result(const forecas_result& result)
+{
+	odds_ = result.odds_;
+	multiple_ = result.multiple_;
+	income_ = result.income_;
+	yield_ = result.yield_;
+	total_cost_ = result.total_cost_;
+	net_income_ = result.net_income_;
+	flag_ = result.flag_;
+
+	strcpy_s(result_msg_, sizeof(result_msg_), result.result_msg_);
+};
+
 void forecas_result::set_result_multiple(unsigned short multiple)
 { 
 	multiple_ = multiple; 
@@ -92,6 +105,9 @@ void organizer::init()
     
     forecas_calculate(base_odds_.begin(),base_odds_.end());
 
+	if(check_odds() != 0) 
+		cout<< "have zero in the odds."<< endl;
+
 	cout<< "every case of results."<< endl;
 	for_each(forecas_results_.begin(), forecas_results_.end(), 
 		boost::bind(&organizer::print, this, _1));
@@ -132,6 +148,9 @@ void organizer::init()
 	//for_each(forecas_results_.begin(), forecas_results_.end(), 
 	//	boost::bind(&organizer::print_result, this, _1));
 
+	optimization_result_ = new optimization_result(this, forecas_results_);
+	optimization_result_->optimization();
+
 	while (true)
 	{
 		char idx[4];
@@ -142,7 +161,7 @@ void organizer::init()
 		if(!position_->add_someone_position(atoi(idx))) {
 			cout<< "input wrong index."<< endl;
 		}
-
+		
 		position_->refresh();
 
 		print();
@@ -164,19 +183,20 @@ void organizer::print()
 	cout<< "-------------------------------------------------------------------"<< std::endl;
 	cout<<left <<setw(4) <<"ID" <<right <<setw(6) << "Result"
 		<<right <<setw(8) <<"Odds" <<right <<setw(10) << "Multiple"
-		<<right <<setw(11) <<"Netincome" <<right <<setw(11) << "TotalCost"
+		<<right <<setw(12) <<"Netincome" <<right <<setw(11) << "TotalCost"
 		<<right <<setw(8) << "Yield"<<"%"<< endl;
 
 	forecas_result_map::iterator rpair = get_result_map()->begin();
 	for(rpair;rpair  != get_result_map()->end();++rpair ) {
-		if( rpair->second.get_result_multiple() == 0) continue;
+		if( rpair->second.get_result_multiple() == 0) 
+			continue;
 
 		cout.setf(ios::fixed);
 		cout<< left<< setw(4)<< setprecision(0)<< rpair->first
 			<< right <<setw(6)<< rpair->second.get_result_msg()
 			<< right <<setw(8)<< setprecision(2)<< rpair->second.get_result_odds()
 			<< right <<setw(10)<< rpair->second.get_result_multiple()
-			<< right <<setw(11)<< setprecision(2)<< rpair->second.get_net_income()
+			<< right <<setw(12)<< setprecision(2)<< rpair->second.get_net_income()
 			<< right <<setw(11)<< setprecision(0)<<rpair->second.get_total_cost()
 			<< right <<setw(8)<< setprecision(2)<< rpair->second.get_result_yield()<< endl;
 		//std::cout<< rpair->first<< ". "<< rpair->second.get_result_msg()<< ": "<< rpair->second.get_result_odds()<< 
@@ -192,6 +212,16 @@ void organizer::print_result(forecas_result_pair rpair)
 	std::cout<< rpair.first<< ". "<< rpair.second.get_result_msg()<< ": "<< rpair.second.get_result_odds()<< 
 		" multiple:"<< rpair.second.get_result_multiple()<< " net income:"<< rpair.second.get_net_income()<<
 		" total cost:"<< rpair.second.get_total_cost()<< " yield:"<< rpair.second.get_result_yield()<< endl;
+};
+
+int organizer::check_odds()
+{
+	forecas_result_map::iterator iter_check = forecas_results_.begin();
+	for(iter_check;iter_check != forecas_results_.end();++iter_check) {
+		if(iter_check->second.get_result_odds() == 1)
+			return -1;
+	}
+	return 0;	
 };
 
 void organizer::forecas_calculate(base_odds_vector::iterator begin, base_odds_vector::iterator end)
@@ -210,11 +240,12 @@ void organizer::set_forecas_result_map(fixtures_base_odds first, fixtures_base_o
 	unsigned int num=0;
 	for(int i=0; i< max_odds_type; ++i) {
 		for(int j=0; j< max_odds_type; ++j) {
+			double odd = (first[i])*(second[j]);
 			result_msg(i, j);
 			forecas_result* frt = new forecas_result(((first[i])*(second[j])), result_);
 			frt->set_flag(flag_);
-			num++;
-			forecas_results_.insert(forecas_result_pair(num, *frt));
+
+			forecas_results_.insert(forecas_result_pair(++num, *frt));
 		}
 	}
 };
@@ -328,6 +359,137 @@ int position::add_someone_position(unsigned int index)
    return 1;
 };
 
+//-----------------------------------------------------------------------
+
+
+optimization_result::optimization_result(organizer* org, forecas_result_map& optimization_result) : 
+	max_min_yield_(0), max_yield_(0), organizer_(org), size_(0)
+{
+	memset(&forecas_results_, 0, sizeof(forecas_results_));
+	memset(&optimization_results_, 0, sizeof(optimization_results_));
+
+	memcpy(&forecas_results_, &optimization_result, sizeof(optimization_result));
+	size_ = organizer_->get_position()->get_real_size();
+};
+
+void optimization_result::optimization()
+{
+	int min_idx = get_result_min_idx();
+
+	forecas_result_map::iterator iter_min = forecas_results_.find(min_idx);
+	max_min_yield_ = iter_min->second.get_result_yield();
+
+	print();
+
+	int cnt=0;
+	while (true)
+	{
+		add_someone_position(min_idx);
+		min_idx = get_result_min_idx();
+
+		iter_min = forecas_results_.find(min_idx);
+		double yield = iter_min->second.get_result_yield();
+
+		print();
+
+		if(yield > max_min_yield_) {
+			max_min_yield_ = yield;
+
+			forecas_result_map forecas_result;
+			memcpy(&forecas_result, &forecas_results_, sizeof(forecas_results_));
+			//insert can`t working
+			optimization_results_.insert(optimization_result_pair(++cnt, forecas_result));
+		}
+		
+		if(organizer_->get_position()->get_cost() > max_total_cost)
+			break;
+	}
+
+	print_result();
+};
+
+void optimization_result::print_result()
+{
+	optimization_result_map::iterator opair = optimization_results_.begin();
+	for(opair;opair != optimization_results_.end();++opair ) {
+		cout<< "-------------------------------------------------------------------"<< std::endl;
+		cout<< setprecision(0)<< opair->first<< ". optimal combination:";
+
+		forecas_result_map::iterator iter_result = opair->second.begin();
+		for(iter_result;iter_result!=opair->second.end();++iter_result) {
+			cout<< " "<<iter_result->second.get_result_multiple();
+		}
+
+		cout<< " max min yeild:"<< max_min_yield_<< endl;
+	}	
+};
+
+struct com_data{ double odd; unsigned int index; };
+bool less_odd(const com_data & m1, const com_data & m2) {
+        return m1.odd < m2.odd;
+}
+
+unsigned int optimization_result::get_result_min_idx()
+{
+	vector<com_data> min_index;	
+	forecas_result_map::iterator iter_opt = forecas_results_.begin();
+	for(iter_opt;iter_opt != forecas_results_.end();++iter_opt) {
+		if(iter_opt->second.get_result_multiple() == 0)
+			continue;
+		
+		com_data* cd = new com_data;
+		cd->odd = iter_opt->second.get_net_income()/lottery;
+		cd->index = iter_opt->first;
+		min_index.push_back(*cd);
+	}
+
+	sort(min_index.begin(), min_index.end(), less_odd);
+
+	return min_index.begin()->index;
+};
+
+void optimization_result::print()
+{
+
+	cout<< "-------------------------------------------------------------------"<< std::endl;
+	cout<<left <<setw(4) <<"ID" <<right <<setw(6) << "Result"
+		<<right <<setw(8) <<"Odds" <<right <<setw(10) << "Multiple"
+		<<right <<setw(12) <<"Netincome" <<right <<setw(11) << "TotalCost"
+		<<right <<setw(8) << "Yield"<<"%"<< endl;
+
+	forecas_result_map::iterator rpair = forecas_results_.begin();
+	for(rpair;rpair  != forecas_results_.end();++rpair ) {
+		if( rpair->second.get_result_multiple() == 0) 
+			continue;
+
+		cout.setf(ios::fixed);
+		cout<< left<< setw(4)<< setprecision(0)<< rpair->first
+			<< right <<setw(6)<< rpair->second.get_result_msg()
+			<< right <<setw(8)<< setprecision(2)<< rpair->second.get_result_odds()
+			<< right <<setw(10)<< rpair->second.get_result_multiple()
+			<< right <<setw(12)<< setprecision(2)<< rpair->second.get_net_income()
+			<< right <<setw(11)<< setprecision(0)<<rpair->second.get_total_cost()
+			<< right <<setw(8)<< setprecision(2)<< rpair->second.get_result_yield()<< endl;
+	}
+};
+
+void optimization_result::get_result_info()
+{
+
+};
+
+int optimization_result::add_someone_position(unsigned int index)
+{
+   forecas_result_map::iterator iter = forecas_results_.find(index);
+   if(iter == forecas_results_.end()) 
+	   return 0;
+
+   iter->second.set_result_multiple(iter->second.get_result_multiple()+1);
+
+   organizer_->get_position()->refresh();
+   
+   return 1;
+};
 
 //-----------------------------------------------------------------------
 
@@ -359,9 +521,11 @@ void regulator::hedge_positions()
 			}
 		}
 		
-		if(break_cnt == map_size) break;
+		if(break_cnt == map_size) 
+			break;
 
-		if(max_total_cost < organizer_->get_position()->get_cost()) break;
+		if(max_total_cost < organizer_->get_position()->get_cost()) 
+			break;
 	}
 };
 

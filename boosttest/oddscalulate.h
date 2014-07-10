@@ -6,13 +6,14 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <set>
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
 
 using namespace std;
 
-enum unit_price { lottery = 2, max_total_cost = 100000 };
+enum unit_price { lottery = 2, max_total_cost = 5000 };
 enum team_odd_type { max_odds_type = 3 };
 enum play_mode { none_modem, portion_mode, whole_mode, manual_mode };
 enum result_type { host_win = 0x01, shake_hand = 0x10, away_win = 0x100,  };
@@ -59,6 +60,7 @@ class forecas_result
     short flag_;
 public:
 	forecas_result(double odds, const char* result_msg);
+	forecas_result(const forecas_result& result);
     
 	void set_result_multiple(unsigned short multiple);
 	void set_total_cost(double tcost);
@@ -78,13 +80,13 @@ public:
 //-----------------------------------------------------------------------
 
 typedef map<unsigned int, forecas_result> forecas_result_map;
-//extern forecas_result_map forecas_results_map_;
 typedef pair<unsigned int, forecas_result> forecas_result_pair;
 
 //-----------------------------------------------------------------------
 
 class position;
 class regulator;
+class optimization_result;
 
 class organizer
 {
@@ -97,6 +99,7 @@ class organizer
 
 	position* position_;
 	regulator* regulator_;
+	optimization_result* optimization_result_;
 public:
     organizer();
     
@@ -114,6 +117,7 @@ private:
 	void print_result(forecas_result_pair rpair);
 	const char* msg_type(int index);
 	short flag_type(int index);
+	int check_odds();
 };
 
 //-----------------------------------------------------------------------
@@ -140,6 +144,38 @@ public:
 private:
 	void total_cost(forecas_result_pair rpair);
 	void set_result_cost(forecas_result_pair rpair);
+};
+
+//-----------------------------------------------------------------------
+
+typedef map<unsigned int, forecas_result_map> optimization_result_map;
+typedef pair<unsigned int, forecas_result_map> optimization_result_pair;
+
+//-----------------------------------------------------------------------
+
+class optimization_result 
+{
+	double max_min_yield_;
+	double max_yield_;
+	unsigned int min_idx;
+	unsigned int size_;
+
+	forecas_result_map forecas_results_;
+	optimization_result_map optimization_results_;
+
+	organizer* organizer_;
+
+public:
+	optimization_result(organizer* org, forecas_result_map& optimization_result);
+
+	void optimization();
+
+	void print_result();
+private:
+	unsigned int get_result_min_idx();
+	int add_someone_position(unsigned int index);
+	void get_result_info();
+	void print();
 };
 
 //-----------------------------------------------------------------------
