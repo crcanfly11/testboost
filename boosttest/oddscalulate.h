@@ -30,7 +30,7 @@ class fixtures_base_odds
 	char away_team_[30];
 public:
 	fixtures_base_odds(double win_odds, double shake_hands_odds, double lose_odds, const char* home_team_name, const char* away_team_name);
-    
+	
 	double operator[] (int index);
 
 	double get_win_odds() const { return team_odds_[home_team_win]; }
@@ -40,10 +40,6 @@ public:
 	const char* get_home_team_name() { return home_team_; }
 	const char* get_away_team_name() { return away_team_; }
 };
-
-//-----------------------------------------------------------------------
-
-typedef vector<fixtures_base_odds> base_odds_vector;
 
 //-----------------------------------------------------------------------
 
@@ -61,7 +57,7 @@ class forecas_result
 public:
 	forecas_result(double odds, const char* result_msg);
 	forecas_result(const forecas_result& result);
-    
+	    
 	void set_result_multiple(unsigned short multiple);
 	void set_total_cost(double tcost);
 	void set_flag(short type) { flag_ |= type; }
@@ -79,6 +75,7 @@ public:
 
 //-----------------------------------------------------------------------
 
+typedef vector<fixtures_base_odds> base_odds_vector;
 typedef map<unsigned int, forecas_result> forecas_result_map;
 typedef pair<unsigned int, forecas_result> forecas_result_pair;
 
@@ -93,6 +90,7 @@ class organizer
 	double htwin_, sh_, atwin_;
 	char htname_[20], atname_[20], tmp_[100], result_[5];
     short flag_;
+	unsigned short index_;
 
 	base_odds_vector base_odds_;
 	forecas_result_map forecas_results_;
@@ -102,19 +100,22 @@ class organizer
 	optimization_result* optimization_result_;
 public:
     organizer();
+	~organizer();
     
 	forecas_result_map* get_result_map() { return &forecas_results_; }
 	position* get_position() { return position_; }
+
+	void init();
+
+	void clear();
 
 	void print();
 	void print(forecas_result_pair rpair);
 
 private:
-    void init();
     void forecas_calculate(base_odds_vector::iterator begin, base_odds_vector::iterator end);
     void set_forecas_result_map(fixtures_base_odds first, fixtures_base_odds second);
 	void result_msg(int first, int second);
-	void print_result(forecas_result_pair rpair);
 	const char* msg_type(int index);
 	short flag_type(int index);
 	int check_odds();
@@ -132,15 +133,15 @@ class position
 
 public:
 	position(organizer* org);
-
+	
 	void refresh();
+	void clear();
 
 	double get_cost() { return cost_; }
 	const char* get_earnings_range() { return earnings_range_; }
 	void set_real_size(int rsize) { real_size_ = rsize; }
 	int get_real_size() const { return real_size_; }
 	int add_someone_position(unsigned int index);
-
 private:
 	void total_cost(forecas_result_pair rpair);
 	void set_result_cost(forecas_result_pair rpair);
@@ -148,15 +149,14 @@ private:
 
 //-----------------------------------------------------------------------
 
-typedef map<unsigned int, forecas_result_map> optimization_result_map;
-typedef pair<unsigned int, forecas_result_map> optimization_result_pair;
+typedef map<double, forecas_result_map> optimization_result_map;
+typedef pair<double, forecas_result_map> optimization_result_pair;
 
 //-----------------------------------------------------------------------
 
 class optimization_result 
 {
 	double max_min_yield_;
-	double max_yield_;
 	unsigned int min_idx;
 	unsigned int size_;
 
@@ -166,16 +166,15 @@ class optimization_result
 	organizer* organizer_;
 
 public:
-	optimization_result(organizer* org, forecas_result_map& optimization_result);
+	optimization_result(organizer* org);
 
 	void optimization();
-
-	void print_result();
+	void clear();
 private:
 	unsigned int get_result_min_idx();
 	int add_someone_position(unsigned int index);
-	void get_result_info();
 	void print();
+	void print_result();
 };
 
 //-----------------------------------------------------------------------
@@ -195,6 +194,7 @@ public:
 	void set_adjusted_min_yield(double min_yield);
 	void set_play_mode(play_mode mode);
 
+	void clear();
 private:
 	void init_position();
 	void init_results(forecas_result_pair rpair);

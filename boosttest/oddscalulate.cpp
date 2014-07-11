@@ -9,7 +9,7 @@ fixtures_base_odds::fixtures_base_odds(double win_odds, double shake_hands_odds,
 	strcpy_s(home_team_, home_team_name);
 	strcpy_s(away_team_, away_team_name);
 };
-    
+ 
 double fixtures_base_odds::operator[] (int index) 
 {
 	if(index < max_odds_type) 
@@ -24,7 +24,6 @@ forecas_result::forecas_result(double odds, const char* result_msg) :
 	odds_(odds), multiple_(0), income_(0), yield_(0), total_cost_(0), net_income_(0), flag_(0x00)
 {
 	strcpy_s(result_msg_, sizeof(result_msg_), result_msg);
-	//yield_ = (odds - 1)*100;
 };
 
 forecas_result::forecas_result(const forecas_result& result)
@@ -67,52 +66,76 @@ void forecas_result::clear_dynamic_data()
 
 //-----------------------------------------------------------------------
 
-organizer::organizer() : htwin_(0), sh_(0), atwin_(0), flag_(0)
+organizer::organizer() : htwin_(0), sh_(0), atwin_(0), flag_(0), index_(0)
 {
     memset(htname_, 0, sizeof(htname_));
     memset(atname_, 0, sizeof(atname_));
 	memset(tmp_, 0, sizeof(tmp_));
 	memset(result_, 0, sizeof(result_));
         
-    init();
+    //init();
+};
+
+organizer::~organizer()
+{
+	clear();
+
+	delete position_; position_ = NULL;
+	delete regulator_; regulator_ = NULL;
+	delete optimization_result_; optimization_result_ = NULL;
 };
 
 void organizer::init()
 {
-	char s1[20], s2[20], s3[20];
+	char s1[10], s2[10], s3[10], s4[10] , s5[10], s6[10];
 
-    while(1) {     
-		cout<< "add new fixtures odds?(Y:yes/others:no)"<<endl;
-		cin>> tmp_;
-		cin.clear();
-		
-		if(!strcmp(tmp_, "Y") || !strcmp(tmp_, "y")) {
-            cout<< "input fixtures odds and team names."<< endl;
-			cin>> skipws>> s1>> s2>> s3;//>> htname_>> atname_;
-			htwin_ = atof(s1);
-			sh_ = atof(s2);
-			atwin_ = atof(s3);
-			cin.clear();
+    //while(1) {     
+		//cout<< "add new fixtures odds?(Y:yes/others:no)"<<endl;
+		//cin>> tmp_;
+		//cin.clear();
+		//
+		//if(!strcmp(tmp_, "Y") || !strcmp(tmp_, "y")) {
+        //  cout<< "input fixtures odds and team names."<< endl;
+		//	cin>> skipws>> s1>> s2>> s3;//>> htname_>> atname_;
+		//	htwin_ = atof(s1);
+		//	sh_ = atof(s2);
+		//	atwin_ = atof(s3);
+		//	cin.clear();
+  //
+  //          fixtures_base_odds* pbo = new fixtures_base_odds(htwin_, sh_, atwin_, htname_, atname_);
+  //          base_odds_.push_back(*pbo);
+  //      }
+		//else
+		//	break;
+  //  }
+	//
+	//if(base_odds_.size() < 2) return;
 
-            fixtures_base_odds* pbo = new fixtures_base_odds(htwin_, sh_, atwin_, htname_, atname_);
-            base_odds_.push_back(*pbo);
-        }
-		else
-			break;
-    }
+	cout<< "input odds. for example 1.1 2 3 1.6 3 4"<< endl;
+	cin>> skipws>> s1>> s2>> s3>> s4>> s5>> s6;//>> htname_>> atname_;
 
-	if(base_odds_.size() < 2) return;
+	htwin_ = atof(s1);
+	sh_ = atof(s2);
+	atwin_ = atof(s3);
+
+	fixtures_base_odds pbo1(htwin_, sh_, atwin_, htname_, atname_);
+    base_odds_.push_back(pbo1);	
+
+	htwin_ = atof(s4);
+	sh_ = atof(s5);
+	atwin_ = atof(s6);
+
+	fixtures_base_odds pbo2(htwin_, sh_, atwin_, htname_, atname_);
+    base_odds_.push_back(pbo2);	
     
     forecas_calculate(base_odds_.begin(),base_odds_.end());
 
 	if(check_odds() != 0) 
-		cout<< "have zero in the odds."<< endl;
+		cout<< "don`t have zero in the odds."<< endl;
 
 	cout<< "every case of results."<< endl;
 	for_each(forecas_results_.begin(), forecas_results_.end(), 
 		boost::bind(&organizer::print, this, _1));
-
-	//cout<< "How to buy? all in without loss or buy Specify combination."<< endl;
 	
 	position_ = new position(this);
 	regulator_ = new regulator(this);
@@ -139,33 +162,48 @@ void organizer::init()
 	mode = portion_mode;   //whole_mode portion_mode
 	regulator_->set_play_mode(mode);
 	print();
-	//Individually adjusted
-
+	
 	//regulator_->set_adjusted_min_income(3);
 	//regulator_->set_adjusted_min_yield(50);
 
-	//cout<< "-----------------------------------------"<< endl;
-	//for_each(forecas_results_.begin(), forecas_results_.end(), 
-	//	boost::bind(&organizer::print_result, this, _1));
-
-	optimization_result_ = new optimization_result(this, forecas_results_);
+	optimization_result_ = new optimization_result(this);
 	optimization_result_->optimization();
 
-	while (true)
-	{
-		char idx[4];
-        cout<< "input Adjustment result multiple index."<< endl;
-		cin>> skipws>> idx;
-		cin.clear();
+	////Manual adjustment
+	//while (true)
+	//{
+	//	char idx[4];
+ //       cout<< "input Adjustment result multiple index."<< endl;
+	//	cin>> skipws>> idx;
+	//	cin.clear();
 
-		if(!position_->add_someone_position(atoi(idx))) {
-			cout<< "input wrong index."<< endl;
-		}
-		
-		position_->refresh();
+	//	if(!position_->add_someone_position(atoi(idx))) {
+	//		cout<< "input wrong index."<< endl;
+	//	}
+	//	
+	//	position_->refresh();
 
-		print();
-	}
+	//	print();
+	//}
+};
+
+void organizer::clear()
+{
+	htwin_ = sh_ = atwin_ = 0;
+	memset(htname_, 0, sizeof(htname_));
+	memset(atname_, 0, sizeof(atname_));
+	memset(tmp_, 0, sizeof(tmp_));
+	memset(result_, 0, sizeof(result_));
+	
+	flag_ = 0x00;
+	index_ = 0;
+
+	base_odds_.clear();
+	forecas_results_.clear();
+	
+	position_->clear();
+	regulator_->clear();
+	optimization_result_->clear();
 };
 
 void organizer::print(forecas_result_pair rpair)
@@ -174,8 +212,6 @@ void organizer::print(forecas_result_pair rpair)
 		<< rpair.second.get_result_msg()<< ": "
 		<< rpair.second.get_result_odds()
 		<< endl;
-		//<< " flag:"
-		//<<  hex<< rpair.second.get_flag()
 };
 
 void organizer::print()
@@ -205,15 +241,6 @@ void organizer::print()
 	}	
 };
 
-void organizer::print_result(forecas_result_pair rpair)
-{
-	if(!rpair.second.get_result_multiple()) return;
-
-	std::cout<< rpair.first<< ". "<< rpair.second.get_result_msg()<< ": "<< rpair.second.get_result_odds()<< 
-		" multiple:"<< rpair.second.get_result_multiple()<< " net income:"<< rpair.second.get_net_income()<<
-		" total cost:"<< rpair.second.get_total_cost()<< " yield:"<< rpair.second.get_result_yield()<< endl;
-};
-
 int organizer::check_odds()
 {
 	forecas_result_map::iterator iter_check = forecas_results_.begin();
@@ -237,15 +264,15 @@ void organizer::forecas_calculate(base_odds_vector::iterator begin, base_odds_ve
 
 void organizer::set_forecas_result_map(fixtures_base_odds first, fixtures_base_odds second)
 {
-	unsigned int num=0;
 	for(int i=0; i< max_odds_type; ++i) {
 		for(int j=0; j< max_odds_type; ++j) {
 			double odd = (first[i])*(second[j]);
 			result_msg(i, j);
-			forecas_result* frt = new forecas_result(((first[i])*(second[j])), result_);
-			frt->set_flag(flag_);
 
-			forecas_results_.insert(forecas_result_pair(++num, *frt));
+			forecas_result frt(((first[i])*(second[j])), result_);
+			frt.set_flag(flag_);
+
+			forecas_results_.insert(forecas_result_pair(++index_, frt));
 		}
 	}
 };
@@ -297,6 +324,14 @@ position::position(organizer* org) :
 	cost_(0), organizer_(org)
 {
 	//refresh();
+};
+
+void position::clear()
+{
+	memset(earnings_range_, 0, sizeof(earnings_range_));
+	cost_ = 0;
+	real_size_ = 0;
+	organizer_ = NULL;		
 };
 
 void position::refresh() 
@@ -361,14 +396,10 @@ int position::add_someone_position(unsigned int index)
 
 //-----------------------------------------------------------------------
 
-
-optimization_result::optimization_result(organizer* org, forecas_result_map& optimization_result) : 
-	max_min_yield_(0), max_yield_(0), organizer_(org), size_(0)
+optimization_result::optimization_result(organizer* org) : 
+	max_min_yield_(0), organizer_(org), size_(0)
 {
-	memset(&forecas_results_, 0, sizeof(forecas_results_));
-	memset(&optimization_results_, 0, sizeof(optimization_results_));
-
-	memcpy(&forecas_results_, &optimization_result, sizeof(optimization_result));
+	memcpy(&forecas_results_, (organizer_->get_result_map()), sizeof(*organizer_->get_result_map()));
 	size_ = organizer_->get_position()->get_real_size();
 };
 
@@ -379,33 +410,38 @@ void optimization_result::optimization()
 	forecas_result_map::iterator iter_min = forecas_results_.find(min_idx);
 	max_min_yield_ = iter_min->second.get_result_yield();
 
-	print();
-
 	int cnt=0;
 	while (true)
 	{
+		if(organizer_->get_position()->get_cost() > max_total_cost)
+			break;
+
 		add_someone_position(min_idx);
 		min_idx = get_result_min_idx();
 
 		iter_min = forecas_results_.find(min_idx);
 		double yield = iter_min->second.get_result_yield();
 
-		print();
-
 		if(yield > max_min_yield_) {
 			max_min_yield_ = yield;
-
-			forecas_result_map forecas_result;
-			memcpy(&forecas_result, &forecas_results_, sizeof(forecas_results_));
-			//insert can`t working
-			optimization_results_.insert(optimization_result_pair(++cnt, forecas_result));
+			
+			optimization_results_.insert(optimization_result_pair(yield, forecas_results_));  //++cnt
 		}
-		
-		if(organizer_->get_position()->get_cost() > max_total_cost)
-			break;
 	}
 
 	print_result();
+};
+
+void optimization_result::clear()
+{
+	max_min_yield_ = 0;
+	min_idx = 0;
+	size_ = 0;
+
+	forecas_results_.clear();
+	optimization_results_.clear();
+	
+	organizer_ = NULL;		
 };
 
 void optimization_result::print_result()
@@ -413,14 +449,19 @@ void optimization_result::print_result()
 	optimization_result_map::iterator opair = optimization_results_.begin();
 	for(opair;opair != optimization_results_.end();++opair ) {
 		cout<< "-------------------------------------------------------------------"<< std::endl;
-		cout<< setprecision(0)<< opair->first<< ". optimal combination:";
+		cout<< "yield:"<< setprecision(2)<< opair->first<< "%";
 
 		forecas_result_map::iterator iter_result = opair->second.begin();
+		cout<< " cost:"<< iter_result->second.get_total_cost()<< " RYB"<< endl;
+		cout<< "optimal combination:";
 		for(iter_result;iter_result!=opair->second.end();++iter_result) {
+			if(iter_result->second.get_result_multiple() == 0) 
+				continue;
+			cout<< " "<<iter_result->second.get_result_msg();
 			cout<< " "<<iter_result->second.get_result_multiple();
 		}
 
-		cout<< " max min yeild:"<< max_min_yield_<< endl;
+		cout<< " "<< endl;
 	}	
 };
 
@@ -437,10 +478,10 @@ unsigned int optimization_result::get_result_min_idx()
 		if(iter_opt->second.get_result_multiple() == 0)
 			continue;
 		
-		com_data* cd = new com_data;
-		cd->odd = iter_opt->second.get_net_income()/lottery;
-		cd->index = iter_opt->first;
-		min_index.push_back(*cd);
+		com_data cd;
+		cd.odd = iter_opt->second.get_net_income()/lottery;
+		cd.index = iter_opt->first;
+		min_index.push_back(cd);
 	}
 
 	sort(min_index.begin(), min_index.end(), less_odd);
@@ -473,11 +514,6 @@ void optimization_result::print()
 	}
 };
 
-void optimization_result::get_result_info()
-{
-
-};
-
 int optimization_result::add_someone_position(unsigned int index)
 {
    forecas_result_map::iterator iter = forecas_results_.find(index);
@@ -496,6 +532,13 @@ int optimization_result::add_someone_position(unsigned int index)
 regulator::regulator(organizer* org) : 
 	adjusted_income_(0), adjusted_yield_(0), organizer_(org), mode_(none_modem)
 {	
+};
+
+void regulator::clear()
+{
+	adjusted_income_ = 0;
+	adjusted_yield_ = 0;
+	organizer_ = NULL;	
 };
 
 void regulator::hedge_positions()
