@@ -160,21 +160,23 @@ class optimization_result
 	unsigned int min_idx;
 	unsigned int size_;
 
-	forecas_result_map forecas_results_;
+	forecas_result_map optimization_forecas_results_;
 	optimization_result_map optimization_results_;
+	struct com_data{ double odd; unsigned int index; };
+	vector<com_data> min_index_;	
 
 	organizer* organizer_;
 
 public:
 	optimization_result(organizer* org);
-
+	
 	void optimization();
 	void clear();
 private:
 	unsigned int get_result_min_idx();
-	int add_someone_position(unsigned int index);
 	void print();
 	void print_result();
+	bool less_odd(const com_data& m1, const com_data& m2);
 };
 
 //-----------------------------------------------------------------------
@@ -197,9 +199,9 @@ public:
 	void clear();
 private:
 	void init_position();
-	void init_results(forecas_result_pair rpair);
+	void init_results(forecas_result& rpair);
 	void hedge_positions();
-	void add_all_position(forecas_result_pair& rpair);
+	void add_all_position(bool is_all = true);
 	void adjust_positions(double value);
 };
 

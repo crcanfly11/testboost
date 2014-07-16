@@ -80,9 +80,9 @@ organizer::~organizer()
 {
 	clear();
 
-	delete position_; position_ = NULL;
-	delete regulator_; regulator_ = NULL;
 	delete optimization_result_; optimization_result_ = NULL;
+	delete regulator_; regulator_ = NULL;
+	delete position_; position_ = NULL;
 };
 
 void organizer::init()
@@ -198,12 +198,12 @@ void organizer::clear()
 	flag_ = 0x00;
 	index_ = 0;
 
-	base_odds_.clear();
 	forecas_results_.clear();
+	base_odds_.clear();
 	
-	position_->clear();
-	regulator_->clear();
 	optimization_result_->clear();
+	regulator_->clear();
+	position_->clear();	
 };
 
 void organizer::print(forecas_result_pair rpair)
@@ -222,8 +222,8 @@ void organizer::print()
 		<<right <<setw(12) <<"Netincome" <<right <<setw(11) << "TotalCost"
 		<<right <<setw(8) << "Yield"<<"%"<< endl;
 
-	forecas_result_map::iterator rpair = get_result_map()->begin();
-	for(rpair;rpair  != get_result_map()->end();++rpair ) {
+	for(forecas_result_map::iterator rpair = get_result_map()->begin();
+		rpair != get_result_map()->end();++rpair ) {
 		if( rpair->second.get_result_multiple() == 0) 
 			continue;
 
@@ -235,16 +235,13 @@ void organizer::print()
 			<< right <<setw(12)<< setprecision(2)<< rpair->second.get_net_income()
 			<< right <<setw(11)<< setprecision(0)<<rpair->second.get_total_cost()
 			<< right <<setw(8)<< setprecision(2)<< rpair->second.get_result_yield()<< endl;
-		//std::cout<< rpair->first<< ". "<< rpair->second.get_result_msg()<< ": "<< rpair->second.get_result_odds()<< 
-		//" multiple:"<< rpair->second.get_result_multiple()<< " net income:"<< rpair->second.get_net_income()<<
-		//" total cost:"<< rpair->second.get_total_cost()<< " yield:"<< rpair->second.get_result_yield()<< endl;
 	}	
 };
 
 int organizer::check_odds()
 {
-	forecas_result_map::iterator iter_check = forecas_results_.begin();
-	for(iter_check;iter_check != forecas_results_.end();++iter_check) {
+	for(forecas_result_map::iterator iter_check = forecas_results_.begin();
+		iter_check != forecas_results_.end();++iter_check) {
 		if(iter_check->second.get_result_odds() == 1)
 			return -1;
 	}
@@ -344,8 +341,8 @@ void position::refresh()
 	//for_each(organizer_->get_result_map()->begin(), organizer_->get_result_map()->end(), 
 	//	boost::bind(&position::total_cost, this, _1));
 
-	forecas_result_map::iterator iter_total_cost = organizer_->get_result_map()->begin();
-	for(iter_total_cost;iter_total_cost != organizer_->get_result_map()->end();++iter_total_cost) {
+	for(forecas_result_map::iterator iter_total_cost = organizer_->get_result_map()->begin();
+		iter_total_cost != organizer_->get_result_map()->end();++iter_total_cost) {
 		if(iter_total_cost->second.get_result_multiple() == 0) 
 			continue;
 
@@ -355,17 +352,12 @@ void position::refresh()
 	//for_each(organizer_->get_result_map()->begin(), organizer_->get_result_map()->end(), 
 	//	boost::bind(&position::set_result_cost, this, _1));
 
-	forecas_result_map::iterator iter_set_result_cost = organizer_->get_result_map()->begin();
-	for(iter_set_result_cost;iter_set_result_cost != organizer_->get_result_map()->end();++iter_set_result_cost) {
+	for(forecas_result_map::iterator iter_set_result_cost = organizer_->get_result_map()->begin();
+		iter_set_result_cost != organizer_->get_result_map()->end();++iter_set_result_cost) {
 		iter_set_result_cost->second.set_total_cost(cost_);
 	}
 
 	//organizer_->print();
-
-	//boost::bind Ç¶Ì×
-	//for_each(organizer_->get_result_map().begin(), organizer_->get_result_map().end(), 
-	//	boost::bind(&forecas_result::set_total_cost, this, 
-	//		boost::bind(&forecas_result_pair::second, _1)));
 };
 
 void position::total_cost(forecas_result_pair rpair)
@@ -383,7 +375,6 @@ void position::set_result_cost(forecas_result_pair rpair)
 int position::add_someone_position(unsigned int index)
 {
    forecas_result_map::iterator iter = organizer_->get_result_map()->find(index);
-
    if(iter == organizer_->get_result_map()->end()) 
 	   return 0;
 
@@ -399,7 +390,15 @@ int position::add_someone_position(unsigned int index)
 optimization_result::optimization_result(organizer* org) : 
 	max_min_yield_(0), organizer_(org), size_(0)
 {
-	memcpy(&forecas_results_, (organizer_->get_result_map()), sizeof(*organizer_->get_result_map()));
+	//container can`t use memcpy as deep copy.
+	//memcpy(&optimization_forecas_results_, (organizer_->get_result_map()), sizeof(*organizer_->get_result_map()));
+	
+	//copy optimization data
+	//forecas_result_map::iterator iter_copy = organizer_->get_result_map()->begin();
+	//for(iter_copy;iter_copy != organizer_->get_result_map()->end();++iter_copy) {
+	//	optimization_forecas_results_.insert(forecas_result_pair(iter_copy->first,iter_copy->second));
+	//}
+
 	size_ = organizer_->get_position()->get_real_size();
 };
 
@@ -407,7 +406,7 @@ void optimization_result::optimization()
 {
 	int min_idx = get_result_min_idx();
 
-	forecas_result_map::iterator iter_min = forecas_results_.find(min_idx);
+	forecas_result_map::iterator iter_min = organizer_->get_result_map()->find(min_idx);
 	max_min_yield_ = iter_min->second.get_result_yield();
 
 	int cnt=0;
@@ -416,16 +415,16 @@ void optimization_result::optimization()
 		if(organizer_->get_position()->get_cost() > max_total_cost)
 			break;
 
-		add_someone_position(min_idx);
+		organizer_->get_position()->add_someone_position(min_idx);
 		min_idx = get_result_min_idx();
 
-		iter_min = forecas_results_.find(min_idx);
+		iter_min = organizer_->get_result_map()->find(min_idx);
 		double yield = iter_min->second.get_result_yield();
 
 		if(yield > max_min_yield_) {
 			max_min_yield_ = yield;
 			
-			optimization_results_.insert(optimization_result_pair(yield, forecas_results_));  //++cnt
+			optimization_results_.insert(optimization_result_pair(yield, *organizer_->get_result_map()));  
 		}
 	}
 
@@ -438,16 +437,17 @@ void optimization_result::clear()
 	min_idx = 0;
 	size_ = 0;
 
-	forecas_results_.clear();
+	organizer_->get_result_map()->clear();
 	optimization_results_.clear();
+	min_index_.clear();
 	
 	organizer_ = NULL;		
 };
 
 void optimization_result::print_result()
 {
-	optimization_result_map::iterator opair = optimization_results_.begin();
-	for(opair;opair != optimization_results_.end();++opair ) {
+	for(optimization_result_map::iterator opair = optimization_results_.begin();
+		opair != optimization_results_.end();++opair ) {
 		cout<< "-------------------------------------------------------------------"<< std::endl;
 		cout<< "yield:"<< setprecision(2)<< opair->first<< "%";
 
@@ -465,41 +465,39 @@ void optimization_result::print_result()
 	}	
 };
 
-struct com_data{ double odd; unsigned int index; };
-bool less_odd(const com_data & m1, const com_data & m2) {
-        return m1.odd < m2.odd;
-}
-
 unsigned int optimization_result::get_result_min_idx()
 {
-	vector<com_data> min_index;	
-	forecas_result_map::iterator iter_opt = forecas_results_.begin();
-	for(iter_opt;iter_opt != forecas_results_.end();++iter_opt) {
+	min_index_.clear();
+	for(forecas_result_map::iterator iter_opt = organizer_->get_result_map()->begin();
+		iter_opt != organizer_->get_result_map()->end();++iter_opt) {
 		if(iter_opt->second.get_result_multiple() == 0)
 			continue;
 		
 		com_data cd;
 		cd.odd = iter_opt->second.get_net_income()/lottery;
 		cd.index = iter_opt->first;
-		min_index.push_back(cd);
+		min_index_.push_back(cd);
 	}
 
-	sort(min_index.begin(), min_index.end(), less_odd);
+	sort(min_index_.begin(), min_index_.end(), boost::bind(&optimization_result::less_odd,this,_1,_2));
 
-	return min_index.begin()->index;
+	return min_index_.begin()->index;
 };
+
+bool optimization_result::less_odd(const com_data& m1, const com_data& m2) {
+        return m1.odd < m2.odd;
+}
 
 void optimization_result::print()
 {
-
 	cout<< "-------------------------------------------------------------------"<< std::endl;
 	cout<<left <<setw(4) <<"ID" <<right <<setw(6) << "Result"
 		<<right <<setw(8) <<"Odds" <<right <<setw(10) << "Multiple"
 		<<right <<setw(12) <<"Netincome" <<right <<setw(11) << "TotalCost"
 		<<right <<setw(8) << "Yield"<<"%"<< endl;
 
-	forecas_result_map::iterator rpair = forecas_results_.begin();
-	for(rpair;rpair  != forecas_results_.end();++rpair ) {
+	for(forecas_result_map::iterator rpair = organizer_->get_result_map()->begin();
+		rpair  != organizer_->get_result_map()->end();++rpair ) {
 		if( rpair->second.get_result_multiple() == 0) 
 			continue;
 
@@ -512,19 +510,6 @@ void optimization_result::print()
 			<< right <<setw(11)<< setprecision(0)<<rpair->second.get_total_cost()
 			<< right <<setw(8)<< setprecision(2)<< rpair->second.get_result_yield()<< endl;
 	}
-};
-
-int optimization_result::add_someone_position(unsigned int index)
-{
-   forecas_result_map::iterator iter = forecas_results_.find(index);
-   if(iter == forecas_results_.end()) 
-	   return 0;
-
-   iter->second.set_result_multiple(iter->second.get_result_multiple()+1);
-
-   organizer_->get_position()->refresh();
-   
-   return 1;
 };
 
 //-----------------------------------------------------------------------
@@ -545,9 +530,9 @@ void regulator::hedge_positions()
 {
 	int map_size = organizer_->get_position()->get_real_size();
 	while(true)	{
-		int break_cnt = 0;
-		forecas_result_map::iterator iter = organizer_->get_result_map()->begin();		
-		for(iter; iter != organizer_->get_result_map()->end(); ++iter) {
+		int break_cnt = 0;	
+		for(forecas_result_map::iterator iter = organizer_->get_result_map()->begin(); 
+			iter!= organizer_->get_result_map()->end(); ++iter) {
 			if(iter->second.get_result_multiple() > 0) {
 				int cost_cnt = (int)(organizer_->get_position()->get_cost()/2);
 				int multiple = iter->second.get_result_multiple();
@@ -580,8 +565,8 @@ void regulator::set_adjusted_min_income(double min_income)
 	int map_size = organizer_->get_position()->get_real_size();
 	while(true) {
 		int break_cnt = 0;
-		forecas_result_map::iterator iter = organizer_->get_result_map()->begin();
-		for(iter; iter != organizer_->get_result_map()->end(); ++iter) {
+		for(forecas_result_map::iterator iter = organizer_->get_result_map()->begin(); 
+			iter != organizer_->get_result_map()->end(); ++iter) {
 			if(iter->second.get_result_multiple() > 0) {
 				if(iter->second.get_net_income() < adjusted_income_) {
 					double odd = iter->second.get_result_odds();
@@ -612,8 +597,8 @@ void regulator::set_adjusted_min_yield(double min_yield)
 	int map_size = organizer_->get_position()->get_real_size();
 	while(true) {
 		int break_cnt = 0;
-		forecas_result_map::iterator iter = organizer_->get_result_map()->begin();
-		for(iter; iter != organizer_->get_result_map()->end(); ++iter) {
+		for(forecas_result_map::iterator iter = organizer_->get_result_map()->begin(); 
+			iter!= organizer_->get_result_map()->end(); ++iter) {
 			if(iter->second.get_result_multiple() > 0) {
 				if(iter->second.get_result_yield() < adjusted_yield_) {
 					double odd = iter->second.get_result_odds();
@@ -639,8 +624,8 @@ void regulator::set_adjusted_min_yield(double min_yield)
 void regulator::adjust_positions(double value)
 {
 	int real_size=0;
-	forecas_result_map::iterator iter_size = organizer_->get_result_map()->begin();
-	for(iter_size;iter_size != organizer_->get_result_map()->end();++iter_size ) {
+	for(forecas_result_map::iterator iter_size = organizer_->get_result_map()->begin();
+		iter_size != organizer_->get_result_map()->end();++iter_size ) {
 		if(iter_size->second.get_result_multiple() > 0)
 			++real_size;
 	}
@@ -648,8 +633,8 @@ void regulator::adjust_positions(double value)
 	int map_size = real_size;
 	while(true) {
 		int break_cnt = 0;
-		forecas_result_map::iterator iter = organizer_->get_result_map()->begin();
-		for(iter; iter != organizer_->get_result_map()->end(); ++iter) {
+		for(forecas_result_map::iterator iter = organizer_->get_result_map()->begin(); 
+			iter != organizer_->get_result_map()->end(); ++iter) {
 			if(iter->second.get_result_multiple() > 0) {
 				if(iter->second.get_net_income() < adjusted_yield_) {
 					double odd = iter->second.get_result_odds();
@@ -679,13 +664,20 @@ void regulator::adjust_positions(double value)
 
 void regulator::set_play_mode(play_mode mode)
 {
+	//using this
 	//for_each(organizer_->get_result_map()->begin(), organizer_->get_result_map()->end(), 
 	//	boost::bind(&regulator::init_results, this, _1));
-	forecas_result_map::iterator iter_clear = organizer_->get_result_map()->begin();
-	for(iter_clear;iter_clear != organizer_->get_result_map()->end();++iter_clear){
-		iter_clear->second.clear_dynamic_data();
-	}
- 
+	//can`t proper operation clear_dynamic_data() why? 
+	//i suspect with multiple calls related to the copy constructor
+
+	for_each(organizer_->get_result_map()->begin(), organizer_->get_result_map()->end(), 
+		boost::bind(&regulator::init_results, this, boost::bind<forecas_result&>(&forecas_result_map::value_type::second,_1)));
+	
+	//for(forecas_result_map::iterator iter_clear = organizer_->get_result_map()->begin();
+	//	iter_clear != organizer_->get_result_map()->end();++iter_clear){
+	//	iter_clear->second.clear_dynamic_data();
+	//}
+
 	mode_ = mode;
 	init_position();
 };
@@ -693,22 +685,10 @@ void regulator::set_play_mode(play_mode mode)
 void regulator::init_position()
 {
 	if(mode_ == whole_mode) {
-		//for_each(organizer_->get_result_map()->begin(), organizer_->get_result_map()->end(), 
-		//	boost::bind(&regulator::add_all_position, this, _1));		
-
-		forecas_result_map::iterator iter_setmul = organizer_->get_result_map()->begin();
-		for(iter_setmul;iter_setmul  != organizer_->get_result_map()->end();++iter_setmul ) {
-			iter_setmul->second.set_result_multiple(1);
-		}
+		add_all_position();
 	}
 	else if(mode_ == portion_mode) {
-		forecas_result_map::iterator iter_setmul = organizer_->get_result_map()->begin();
-		for(iter_setmul;iter_setmul  != organizer_->get_result_map()->end();++iter_setmul ) {
-			if(iter_setmul->second.get_flag()&away_win) 
-				continue;
-
-			iter_setmul->second.set_result_multiple(1);
-		}		
+		add_all_position(false);
 	}
 	else if(mode_ == manual_mode)
 	{
@@ -716,8 +696,8 @@ void regulator::init_position()
 	}
 
 	int real_size=0;
-	forecas_result_map::iterator iter_size = organizer_->get_result_map()->begin();
-	for(iter_size;iter_size != organizer_->get_result_map()->end();++iter_size ) {
+	for(forecas_result_map::iterator iter_size = organizer_->get_result_map()->begin();
+		iter_size != organizer_->get_result_map()->end();++iter_size ) {
 		if(iter_size->second.get_result_multiple() > 0)
 			++real_size;
 	}
@@ -727,20 +707,22 @@ void regulator::init_position()
 	organizer_->get_position()->refresh();
 
 	hedge_positions();
-
-	//Automatic optimization data
-
-	//organizer_->print();
 };
 
-void regulator::add_all_position(forecas_result_pair& rpair)
-{
-	rpair.second.set_result_multiple(1);
+void regulator::add_all_position(bool is_all)
+{	
+	for(forecas_result_map::iterator iter_setmul = organizer_->get_result_map()->begin();
+		iter_setmul != organizer_->get_result_map()->end();++iter_setmul ) {
+		if(!is_all && iter_setmul->second.get_flag()&away_win) 
+			continue;
+
+		iter_setmul->second.set_result_multiple(1);
+	}	
 };
 
-void regulator::init_results(forecas_result_pair rpair)
+void regulator::init_results(forecas_result& rpair)
 {
-	rpair.second.clear_dynamic_data();
+	rpair.clear_dynamic_data();
 };
 
 //-----------------------------------------------------------------------
