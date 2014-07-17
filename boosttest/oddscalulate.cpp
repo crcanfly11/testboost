@@ -6,8 +6,8 @@ fixtures_base_odds::fixtures_base_odds(double win_odds, double shake_hands_odds,
 	team_odds_[shake_hands] = shake_hands_odds;
 	team_odds_[away_team_win] = lose_odds;
         
-	strcpy_s(home_team_, home_team_name);
-	strcpy_s(away_team_, away_team_name);
+	strncpy(home_team_, home_team_name, sizeof(home_team_));
+	strncpy(away_team_, away_team_name, sizeof(away_team_));
 };
  
 double fixtures_base_odds::operator[] (int index) 
@@ -20,10 +20,10 @@ double fixtures_base_odds::operator[] (int index)
 
 //-----------------------------------------------------------------------
 
-forecas_result::forecas_result(double odds, const char* result_msg) : 
-	odds_(odds), multiple_(0), income_(0), yield_(0), total_cost_(0), net_income_(0), flag_(0x00)
+forecas_result::forecas_result(double odds, double probability, const char* result_msg) : 
+	odds_(odds), multiple_(0), income_(0), yield_(0), total_cost_(0), net_income_(0), flag_(0x00), probability_(probability)
 {
-	strcpy_s(result_msg_, sizeof(result_msg_), result_msg);
+	strncpy(result_msg_, result_msg, sizeof(result_msg_));
 };
 
 forecas_result::forecas_result(const forecas_result& result)
@@ -35,8 +35,9 @@ forecas_result::forecas_result(const forecas_result& result)
 	total_cost_ = result.total_cost_;
 	net_income_ = result.net_income_;
 	flag_ = result.flag_;
+	probability_ = result.probability_;
 
-	strcpy_s(result_msg_, sizeof(result_msg_), result.result_msg_);
+	strncpy(result_msg_, result.result_msg_, sizeof(result_msg_));
 };
 
 void forecas_result::set_result_multiple(unsigned short multiple)
@@ -128,6 +129,7 @@ void organizer::init()
 	fixtures_base_odds pbo2(htwin_, sh_, atwin_, htname_, atname_);
     base_odds_.push_back(pbo2);	
     
+	//generate base result data
     forecas_calculate(base_odds_.begin(),base_odds_.end());
 
 	if(check_odds() != 0) 
@@ -208,10 +210,10 @@ void organizer::clear()
 
 void organizer::print(forecas_result_pair rpair)
 {
+	cout.setf(ios::fixed);
 	std::cout<< rpair.first<< ". "
 		<< rpair.second.get_result_msg()<< ": "
-		<< rpair.second.get_result_odds()
-		<< endl;
+		<< rpair.second.get_result_odds()<< endl;
 };
 
 void organizer::print()
@@ -220,7 +222,9 @@ void organizer::print()
 	cout<<left <<setw(4) <<"ID" <<right <<setw(6) << "Result"
 		<<right <<setw(8) <<"Odds" <<right <<setw(10) << "Multiple"
 		<<right <<setw(12) <<"Netincome" <<right <<setw(11) << "TotalCost"
-		<<right <<setw(8) << "Yield"<<"%"<< endl;
+		<<right <<setw(8) << "Yield"<<"%"
+		<<right <<setw(12) << "Probability"<<"%"
+		<<endl;
 
 	for(forecas_result_map::iterator rpair = get_result_map()->begin();
 		rpair != get_result_map()->end();++rpair ) {
@@ -234,7 +238,9 @@ void organizer::print()
 			<< right <<setw(10)<< rpair->second.get_result_multiple()
 			<< right <<setw(12)<< setprecision(2)<< rpair->second.get_net_income()
 			<< right <<setw(11)<< setprecision(0)<<rpair->second.get_total_cost()
-			<< right <<setw(8)<< setprecision(2)<< rpair->second.get_result_yield()<< endl;
+			<< right <<setw(8)<< setprecision(2)<< rpair->second.get_result_yield()
+			<< right <<setw(12)<< setprecision(2)<< rpair->second.get_result_probability()
+			<< endl;
 	}	
 };
 
@@ -263,10 +269,8 @@ void organizer::set_forecas_result_map(fixtures_base_odds first, fixtures_base_o
 {
 	for(int i=0; i< max_odds_type; ++i) {
 		for(int j=0; j< max_odds_type; ++j) {
-			double odd = (first[i])*(second[j]);
 			result_msg(i, j);
-
-			forecas_result frt(((first[i])*(second[j])), result_);
+			forecas_result frt(((first[i])*(second[j])), ((1/first[i])*(1/second[j])*100), result_);
 			frt.set_flag(flag_);
 
 			forecas_results_.insert(forecas_result_pair(++index_, frt));
@@ -318,7 +322,7 @@ short organizer::flag_type(int index)
 //-----------------------------------------------------------------------
 
 position::position(organizer* org) : 
-	cost_(0), organizer_(org)
+	cost_(0), real_size_(0), winning_probability_(0), organizer_(org)
 {
 	//refresh();
 };
@@ -328,6 +332,7 @@ void position::clear()
 	memset(earnings_range_, 0, sizeof(earnings_range_));
 	cost_ = 0;
 	real_size_ = 0;
+	winning_probability_ = 0;
 	organizer_ = NULL;		
 };
 
@@ -336,7 +341,7 @@ void position::refresh()
 	cost_ = 0;
 
 	memset(earnings_range_, 0, sizeof(earnings_range_));
-	strcpy_s(earnings_range_, "The earnings range:");
+	strncpy(earnings_range_, "The earnings range:", sizeof(earnings_range_));
 
 	//for_each(organizer_->get_result_map()->begin(), organizer_->get_result_map()->end(), 
 	//	boost::bind(&position::total_cost, this, _1));
@@ -452,7 +457,9 @@ void optimization_result::print_result()
 		cout<< "yield:"<< setprecision(2)<< opair->first<< "%";
 
 		forecas_result_map::iterator iter_result = opair->second.begin();
-		cout<< " cost:"<< iter_result->second.get_total_cost()<< " RYB"<< endl;
+		cout<< " cost:"<< iter_result->second.get_total_cost()<< " RYB"
+			<< " winning probability:"<< organizer_->get_position()->get_winning_probability()
+			<< endl;
 		cout<< "optimal combination:";
 		for(iter_result;iter_result!=opair->second.end();++iter_result) {
 			if(iter_result->second.get_result_multiple() == 0) 
@@ -494,7 +501,9 @@ void optimization_result::print()
 	cout<<left <<setw(4) <<"ID" <<right <<setw(6) << "Result"
 		<<right <<setw(8) <<"Odds" <<right <<setw(10) << "Multiple"
 		<<right <<setw(12) <<"Netincome" <<right <<setw(11) << "TotalCost"
-		<<right <<setw(8) << "Yield"<<"%"<< endl;
+		<<right <<setw(8) << "Yield"<<"%"
+		<<right <<setw(12) << "Probability"<<"%"
+		<<endl;
 
 	for(forecas_result_map::iterator rpair = organizer_->get_result_map()->begin();
 		rpair  != organizer_->get_result_map()->end();++rpair ) {
@@ -508,7 +517,9 @@ void optimization_result::print()
 			<< right <<setw(10)<< rpair->second.get_result_multiple()
 			<< right <<setw(12)<< setprecision(2)<< rpair->second.get_net_income()
 			<< right <<setw(11)<< setprecision(0)<<rpair->second.get_total_cost()
-			<< right <<setw(8)<< setprecision(2)<< rpair->second.get_result_yield()<< endl;
+			<< right <<setw(8)<< setprecision(2)<< rpair->second.get_result_yield()
+			<< right <<setw(12)<< setprecision(2)<< rpair->second.get_result_probability()
+			<< endl;
 	}
 };
 
@@ -696,13 +707,17 @@ void regulator::init_position()
 	}
 
 	int real_size=0;
+	double winning_probability=0;
 	for(forecas_result_map::iterator iter_size = organizer_->get_result_map()->begin();
 		iter_size != organizer_->get_result_map()->end();++iter_size ) {
-		if(iter_size->second.get_result_multiple() > 0)
+		if(iter_size->second.get_result_multiple() > 0) {
 			++real_size;
+			winning_probability += iter_size->second.get_result_probability();
+		}
 	}
 
 	organizer_->get_position()->set_real_size(real_size);
+	organizer_->get_position()->set_winning_probability(winning_probability);
 
 	organizer_->get_position()->refresh();
 

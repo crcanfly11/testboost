@@ -15,6 +15,7 @@ using namespace std;
 
 enum unit_price { lottery = 2, max_total_cost = 5000 };
 enum team_odd_type { max_odds_type = 3 };
+enum play_type { win_draw_lost = 3 };
 enum play_mode { none_modem, portion_mode, whole_mode, manual_mode };
 enum result_type { host_win = 0x01, shake_hand = 0x10, away_win = 0x100,  };
 
@@ -23,9 +24,9 @@ enum result_type { host_win = 0x01, shake_hand = 0x10, away_win = 0x100,  };
 class fixtures_base_odds
 {
 	enum team_odd_enum { home_team_win = 0, shake_hands = 1, away_team_win = 2 };
-    
-	double team_odds_[3];
-    
+	    
+	double team_odds_[win_draw_lost];
+	    
 	char home_team_[30];
 	char away_team_[30];
 public:
@@ -36,7 +37,7 @@ public:
 	double get_win_odds() const { return team_odds_[home_team_win]; }
 	double get_shake_hands_odds() const { return team_odds_[shake_hands]; }
 	double get_lose_odds() const { return team_odds_[away_team_win]; }
-
+	
 	const char* get_home_team_name() { return home_team_; }
 	const char* get_away_team_name() { return away_team_; }
 };
@@ -46,6 +47,7 @@ public:
 class forecas_result
 {
 	double odds_;
+	double probability_;        //Unit of Measure %
 	char result_msg_[10];
 
 	unsigned short multiple_;	 //bei shu
@@ -54,8 +56,9 @@ class forecas_result
 	double total_cost_;
 	double net_income_;
     short flag_;
+  
 public:
-	forecas_result(double odds, const char* result_msg);
+	forecas_result(double odds, double probability, const char* result_msg);
 	forecas_result(const forecas_result& result);
 	    
 	void set_result_multiple(unsigned short multiple);
@@ -65,6 +68,7 @@ public:
 
 	unsigned short get_result_multiple() const { return multiple_; }
 	double get_result_odds() const { return odds_; }
+	double get_result_probability() const { return probability_; }
 	double get_result_yield() const { return yield_; }
 	double get_result_income() const { return income_; }
 	double get_net_income() const { return net_income_; }
@@ -128,6 +132,7 @@ class position
 	char earnings_range_[100];   //range of yield
 	double cost_;
 	int real_size_;
+	double winning_probability_;
 
 	organizer* organizer_;
 
@@ -136,12 +141,16 @@ public:
 	
 	void refresh();
 	void clear();
+	int add_someone_position(unsigned int index);
+
+	void set_real_size(int rsize) { real_size_ = rsize; }
+	void set_winning_probability(double probability) { winning_probability_ = probability; }
 
 	double get_cost() { return cost_; }
 	const char* get_earnings_range() { return earnings_range_; }
-	void set_real_size(int rsize) { real_size_ = rsize; }
 	int get_real_size() const { return real_size_; }
-	int add_someone_position(unsigned int index);
+	double get_winning_probability() const { return winning_probability_; }
+
 private:
 	void total_cost(forecas_result_pair rpair);
 	void set_result_cost(forecas_result_pair rpair);
