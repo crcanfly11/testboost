@@ -401,7 +401,6 @@ void optimization_result::optimization()
 	forecas_result_map::iterator iter_min = organizer_->get_result_map()->find(min_idx);
 	max_min_yield_ = iter_min->second.get_result_yield();
 
-	int cnt=0;
 	while (true)
 	{
 		if(organizer_->get_position()->get_cost() > max_total_cost)
