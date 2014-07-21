@@ -135,35 +135,22 @@ void organizer::init()
 	if(check_odds() != 0) 
 		cout<< "don`t have zero in the odds."<< endl;
 
-	cout<< "every case of results."<< endl;
-	for_each(forecas_results_.begin(), forecas_results_.end(), 
-		boost::bind(&organizer::print, this, _1));
+	//cout<< "every case of results."<< endl;
+	//for_each(forecas_results_.begin(), forecas_results_.end(), 
+	//	boost::bind(&organizer::print, this, _1));
 	
 	position_ = new position(this);
 	regulator_ = new regulator(this);
 
-	//cout<< "Select mode 1, portion_mode; 2, whole_mode;"<< endl;
-	//char smode[10];
-	//cin>> skipws>> smode;
-	//play_mode mode;
-	//if(atoi(smode) == 1) {
-	//	mode = portion_mode;
-
-	//	cout<< "Weed out results is HL,AL"<< endl;
-	//}
-	//else if(atoi(smode) == 2) {
-	//	mode = whole_mode;
-	//}
-
-	cout<< "results of all case."<< endl;
-	play_mode mode = whole_mode;   //whole_mode portion_mode
-	regulator_->set_play_mode(mode);
-	print();
+	//cout<< "results of all case."<< endl;
+	//play_mode mode = whole_mode;   //whole_mode portion_mode
+	//regulator_->set_play_mode(mode);
+	//print();
 	
-	cout<< "results that weed out  HW and AW"<< endl;
-	mode = portion_mode;   //whole_mode portion_mode
+	//cout<< "results that weed out  HW and AW"<< endl;
+	play_mode mode = portion_mode;   //whole_mode portion_mode
 	regulator_->set_play_mode(mode);
-	print();
+	//print();
 	
 	//regulator_->set_adjusted_min_income(3);
 	//regulator_->set_adjusted_min_yield(50);
@@ -171,7 +158,7 @@ void organizer::init()
 	optimization_result_ = new optimization_result(this);
 	optimization_result_->optimization();
 
-	////Manual adjustment
+	////test
 	//while (true)
 	//{
 	//	char idx[4];
@@ -281,8 +268,8 @@ void organizer::set_forecas_result_map(fixtures_base_odds first, fixtures_base_o
 void organizer::result_msg(int first, int second)
 {
 	memset(result_, 0, sizeof(result_));
-	strcat_s(result_,sizeof(result_), msg_type(first));
-	strcat_s(result_,sizeof(result_), msg_type(second));
+	strncat(result_, msg_type(first), sizeof(result_));
+	strncat(result_, msg_type(second), sizeof(result_));
 
 	flag_ = 0x00; 
 	flag_type(first);
@@ -451,24 +438,36 @@ void optimization_result::clear()
 
 void optimization_result::print_result()
 {
+	//only using 4 result print
+	cout<< "-------------------------------------------------------------------"<< std::endl;
+	cout<<left <<setw(4) <<"ID" 
+		<<right <<setw(5) <<"Yield" <<"%"
+		<<right <<setw(8) <<"Cost" <<"(Y)"  
+		<<right <<setw(8) <<"Winning" <<"%"
+		<<right <<setw(6) <<"HWAW"
+		<<right <<setw(6) <<"HWSH"
+		<<right <<setw(6) <<"SHAW"
+		<<right <<setw(6) <<"SHSH"
+		<<endl;
+
+	int cnt = 0;
 	for(optimization_result_map::iterator opair = optimization_results_.begin();
 		opair != optimization_results_.end();++opair ) {
-		cout<< "-------------------------------------------------------------------"<< std::endl;
-		cout<< "yield:"<< setprecision(2)<< opair->first<< "%";
+			forecas_result_map::iterator iter_result = opair->second.begin();
 
-		forecas_result_map::iterator iter_result = opair->second.begin();
-		cout<< " cost:"<< iter_result->second.get_total_cost()<< " RYB"
-			<< " winning probability:"<< organizer_->get_position()->get_winning_probability()
-			<< endl;
-		cout<< "optimal combination:";
-		for(iter_result;iter_result!=opair->second.end();++iter_result) {
+			cout.setf(ios::fixed);
+			cout<< left<< setw(4)<< setprecision(0)<< ++cnt
+				<< right<< setw(5)<< setprecision(2)<< opair->first
+				<< right<< setw(9)<< setprecision(2)<< iter_result->second.get_total_cost()
+				<< right<< setw(11)<< setprecision(2)<< organizer_->get_position()->get_winning_probability()
+				<< right<< setw(1) <<" ";
+
+		for(;iter_result!=opair->second.end();++iter_result) {
 			if(iter_result->second.get_result_multiple() == 0) 
 				continue;
-			cout<< " "<<iter_result->second.get_result_msg();
-			cout<< " "<<iter_result->second.get_result_multiple();
+			cout<< right<< setw(6)<< setprecision(0)<< iter_result->second.get_result_multiple();
 		}
-
-		cout<< " "<< endl;
+		cout<< endl;
 	}	
 };
 
