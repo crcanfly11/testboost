@@ -169,10 +169,8 @@ class optimization_result
 	unsigned int min_idx;
 	unsigned int size_;
 
-	forecas_result_map optimization_forecas_results_;
-	optimization_result_map optimization_results_;
-	struct com_data{ double odd; unsigned int index; };
-	vector<com_data> min_index_;	
+	optimization_result_map optimization_results_;	
+	map<double, unsigned int> min_index_map_;
 
 	organizer* organizer_;
 
@@ -185,7 +183,6 @@ private:
 	unsigned int get_result_min_idx();
 	void print();
 	void print_result();
-	bool less_odd(const com_data& m1, const com_data& m2);
 };
 
 //-----------------------------------------------------------------------
