@@ -430,25 +430,24 @@ void optimization_result::clear()
 
 	organizer_->get_result_map()->clear();
 	optimization_results_.clear();
-	min_index_map_.clear();
+	min_index_.clear();
 	
 	organizer_ = NULL;		
 };
 
 void optimization_result::print_result()
 {
+	//only using 4 result print
 	cout<< "-------------------------------------------------------------------"<< std::endl;
 	cout<<left <<setw(4) <<"ID" 
 		<<right <<setw(5) <<"Yield" <<"%"
 		<<right <<setw(8) <<"Cost" <<"(Y)"  
-		<<right <<setw(8) <<"Winning" <<"%";
-	forecas_result_map::iterator iter_result = organizer_->get_result_map()->begin();
-	for(;iter_result!=organizer_->get_result_map()->end();++iter_result) {
-		if(iter_result->second.get_result_multiple() == 0) 
-			continue;
-		cout<< right<< setw(6)<< setprecision(0)<< iter_result->second.get_result_msg();
-	}
-	cout<< endl;
+		<<right <<setw(8) <<"Winning" <<"%"
+		<<right <<setw(6) <<"HWAW"
+		<<right <<setw(6) <<"HWSH"
+		<<right <<setw(6) <<"SHAW"
+		<<right <<setw(6) <<"SHSH"
+		<<endl;
 
 	int cnt = 0;
 	for(optimization_result_map::iterator opair = optimization_results_.begin();
@@ -473,17 +472,26 @@ void optimization_result::print_result()
 
 unsigned int optimization_result::get_result_min_idx()
 {
-	min_index_map_.clear();
+	min_index_.clear();
 	for(forecas_result_map::iterator iter_opt = organizer_->get_result_map()->begin();
 		iter_opt != organizer_->get_result_map()->end();++iter_opt) {
 		if(iter_opt->second.get_result_multiple() == 0)
 			continue;
 		
-		min_index_map_.insert(pair<double, unsigned int>((iter_opt->second.get_net_income()/lottery), iter_opt->first));
+		com_data cd;
+		cd.odd = iter_opt->second.get_net_income()/lottery;
+		cd.index = iter_opt->first;
+		min_index_.push_back(cd);
 	}
-	map<double, unsigned int>::iterator iter_min_index = min_index_map_.begin();
-	return iter_min_index->second;
+
+	sort(min_index_.begin(), min_index_.end(), boost::bind(&optimization_result::less_odd,this,_1,_2));
+
+	return min_index_.begin()->index;
 };
+
+bool optimization_result::less_odd(const com_data& m1, const com_data& m2) {
+        return m1.odd < m2.odd;
+}
 
 void optimization_result::print()
 {
