@@ -142,15 +142,16 @@ void organizer::init()
 	position_ = new position(this);
 	regulator_ = new regulator(this);
 
+	play_mode mode;
 	//cout<< "results of all case."<< endl;
-	//play_mode mode = whole_mode;   //whole_mode portion_mode
+	//mode = whole_mode;   //whole_mode portion_mode
 	//regulator_->set_play_mode(mode);
 	//print();
 	
 	//cout<< "results that weed out  HW and AW"<< endl;
-	play_mode mode = portion_mode;   //whole_mode portion_mode
+	mode = portion_mode;   //whole_mode portion_mode
 	regulator_->set_play_mode(mode);
-	//print();
+	print();
 	
 	//regulator_->set_adjusted_min_income(3);
 	//regulator_->set_adjusted_min_yield(50);
@@ -272,8 +273,10 @@ void organizer::result_msg(int first, int second)
 	strncat(result_, msg_type(second), sizeof(result_));
 
 	flag_ = 0x00; 
-	flag_type(first);
-	flag_type(second);
+	//flag_type(first);
+	//flag_type(second);
+	flag_type_9((++first)*(++second));
+
 };
 
 const char* organizer::msg_type(int index) 
@@ -305,6 +308,33 @@ short organizer::flag_type(int index)
 		return 0;
 	}
 };
+
+int organizer::flag_type_9(int index)
+{
+	switch (index)
+	{
+	case 1:
+		return flag_ = HWHW;
+	case 2:
+		return flag_ = HWSH;
+	case 3:
+		return flag_ = HWAW;
+	case 4:
+		return flag_ = SHHW;
+	case 5:
+		return flag_ = SHSH;
+	case 6:
+		return flag_ = SHAW;
+	case 7:
+		return flag_ = AWHW;
+	case 8:
+		return flag_ = AWSH;
+	case 9:
+		return flag_ = AWAW;
+	default:
+		return 0;
+	}
+}
 
 //-----------------------------------------------------------------------
 
@@ -430,24 +460,25 @@ void optimization_result::clear()
 
 	organizer_->get_result_map()->clear();
 	optimization_results_.clear();
-	min_index_.clear();
+	min_index_map_.clear();
 	
 	organizer_ = NULL;		
 };
 
 void optimization_result::print_result()
 {
-	//only using 4 result print
 	cout<< "-------------------------------------------------------------------"<< std::endl;
 	cout<<left <<setw(4) <<"ID" 
 		<<right <<setw(5) <<"Yield" <<"%"
 		<<right <<setw(8) <<"Cost" <<"(Y)"  
-		<<right <<setw(8) <<"Winning" <<"%"
-		<<right <<setw(6) <<"HWAW"
-		<<right <<setw(6) <<"HWSH"
-		<<right <<setw(6) <<"SHAW"
-		<<right <<setw(6) <<"SHSH"
-		<<endl;
+		<<right <<setw(8) <<"Winning" <<"%";
+	forecas_result_map::iterator iter_result = organizer_->get_result_map()->begin();
+	for(;iter_result!=organizer_->get_result_map()->end();++iter_result) {
+		if(iter_result->second.get_result_multiple() == 0) 
+			continue;
+		cout<< right<< setw(6)<< setprecision(0)<< iter_result->second.get_result_msg();
+	}
+	cout<< endl;
 
 	int cnt = 0;
 	for(optimization_result_map::iterator opair = optimization_results_.begin();
@@ -472,26 +503,17 @@ void optimization_result::print_result()
 
 unsigned int optimization_result::get_result_min_idx()
 {
-	min_index_.clear();
+	min_index_map_.clear();
 	for(forecas_result_map::iterator iter_opt = organizer_->get_result_map()->begin();
 		iter_opt != organizer_->get_result_map()->end();++iter_opt) {
 		if(iter_opt->second.get_result_multiple() == 0)
 			continue;
 		
-		com_data cd;
-		cd.odd = iter_opt->second.get_net_income()/lottery;
-		cd.index = iter_opt->first;
-		min_index_.push_back(cd);
+		min_index_map_.insert(pair<double, unsigned int>((iter_opt->second.get_net_income()/lottery), iter_opt->first));
 	}
-
-	sort(min_index_.begin(), min_index_.end(), boost::bind(&optimization_result::less_odd,this,_1,_2));
-
-	return min_index_.begin()->index;
+	map<double, unsigned int>::iterator iter_min_index = min_index_map_.begin();
+	return iter_min_index->second;
 };
-
-bool optimization_result::less_odd(const com_data& m1, const com_data& m2) {
-        return m1.odd < m2.odd;
-}
 
 void optimization_result::print()
 {
@@ -721,12 +743,16 @@ void regulator::init_position()
 
 	hedge_positions();
 };
-
+//enum result_type_9 { HWHW = 0x100100, HWSH = 0x100010, HWAW = 0x100001, 
+//	                 SHHW = 0x010100, SHSH = 0x010010, SHAW = 0x010001, 
+//					 AWHW = 0x001100, AWSH = 0x001010, AWAW = 0x001001 };
 void regulator::add_all_position(bool is_all)
 {	
 	for(forecas_result_map::iterator iter_setmul = organizer_->get_result_map()->begin();
 		iter_setmul != organizer_->get_result_map()->end();++iter_setmul ) {
-		if(!is_all && iter_setmul->second.get_flag()&away_win) 
+		//if(!is_all && iter_setmul->second.get_flag()&away_win) 
+		//	continue;
+		if(!is_all && iter_setmul->second.get_flag()&0x001001) 
 			continue;
 
 		iter_setmul->second.set_result_multiple(1);

@@ -4,20 +4,22 @@
 #include <boost/bind.hpp>
 
 #include <iostream>
+#include <iomanip>
 #include <vector>
 #include <map>
-#include <set>
 #include <algorithm>
-#include <iomanip>
-#include <iostream>
+
 
 using namespace std;
 
-enum unit_price { lottery = 2, max_total_cost = 5000 };
+enum unit_price { lottery = 2, max_total_cost = 500 };
 enum team_odd_type { max_odds_type = 3 };
 enum play_type { win_draw_lost = 3 };
 enum play_mode { none_modem, portion_mode, whole_mode, manual_mode };
-enum result_type { host_win = 0x01, shake_hand = 0x10, away_win = 0x100,  };
+enum result_type{ host_win = 0x01, shake_hand = 0x10, away_win = 0x100,  };
+enum result_type_9 { HWHW = 0x100100, HWSH = 0x100010, HWAW = 0x100001, 
+	                 SHHW = 0x010100, SHSH = 0x010010, SHAW = 0x010001, 
+					 AWHW = 0x001100, AWSH = 0x001010, AWAW = 0x001001 };
 
 //-----------------------------------------------------------------------
 
@@ -93,7 +95,7 @@ class organizer
 {
 	double htwin_, sh_, atwin_;
 	char htname_[20], atname_[20], tmp_[100], result_[5];
-    short flag_;
+    int flag_;
 	unsigned short index_;
 
 	base_odds_vector base_odds_;
@@ -122,6 +124,7 @@ private:
 	void result_msg(int first, int second);
 	const char* msg_type(int index);
 	short flag_type(int index);
+	int flag_type_9(int index);
 	int check_odds();
 };
 
@@ -169,10 +172,8 @@ class optimization_result
 	unsigned int min_idx;
 	unsigned int size_;
 
-	forecas_result_map optimization_forecas_results_;
-	optimization_result_map optimization_results_;
-	struct com_data{ double odd; unsigned int index; };
-	vector<com_data> min_index_;	
+	optimization_result_map optimization_results_;	
+	map<double, unsigned int> min_index_map_;
 
 	organizer* organizer_;
 
@@ -185,7 +186,6 @@ private:
 	unsigned int get_result_min_idx();
 	void print();
 	void print_result();
-	bool less_odd(const com_data& m1, const com_data& m2);
 };
 
 //-----------------------------------------------------------------------
