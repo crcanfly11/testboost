@@ -141,6 +141,7 @@ void organizer::init()
 	
 	position_ = new position(this);
 	regulator_ = new regulator(this);
+<<<<<<< HEAD
   	optimization_result_ = new optimization_result(this);
 
     //play_mode mode;
@@ -162,6 +163,26 @@ void organizer::init()
     //输出
     
     
+=======
+
+	play_mode mode;
+	//cout<< "results of all case."<< endl;
+	//mode = whole_mode;   //whole_mode portion_mode
+	//regulator_->set_play_mode(mode);
+	//print();
+	
+	//cout<< "results that weed out  HW and AW"<< endl;
+	mode = portion_mode;   //whole_mode portion_mode
+	regulator_->set_play_mode(mode);
+	print();
+	
+	//regulator_->set_adjusted_min_income(3);
+	//regulator_->set_adjusted_min_yield(50);
+
+	optimization_result_ = new optimization_result(this);
+	optimization_result_->optimization();
+
+>>>>>>> c7a79a088264fbd89248e956647b5c48b122f27d
 	////test
 	//while (true)
 	//{
@@ -287,8 +308,16 @@ void organizer::result_msg(int first, int second)
 	strncat(result_, msg_type(first), sizeof(result_));
 	strncat(result_, msg_type(second), sizeof(result_));
 
+<<<<<<< HEAD
 	flag_ = 0x00;
     flag_type(2*first+(++second)+first);
+=======
+	flag_ = 0x00; 
+	//flag_type(first);
+	//flag_type(second);
+	flag_type_9((++first)*(++second));
+
+>>>>>>> c7a79a088264fbd89248e956647b5c48b122f27d
 };
 
 const char* organizer::msg_type(int index) 
@@ -332,6 +361,33 @@ int organizer::flag_type(int index)
             return 0;
 	}
 };
+
+int organizer::flag_type_9(int index)
+{
+	switch (index)
+	{
+	case 1:
+		return flag_ = HWHW;
+	case 2:
+		return flag_ = HWSH;
+	case 3:
+		return flag_ = HWAW;
+	case 4:
+		return flag_ = SHHW;
+	case 5:
+		return flag_ = SHSH;
+	case 6:
+		return flag_ = SHAW;
+	case 7:
+		return flag_ = AWHW;
+	case 8:
+		return flag_ = AWSH;
+	case 9:
+		return flag_ = AWAW;
+	default:
+		return 0;
+	}
+}
 
 //-----------------------------------------------------------------------
 
@@ -736,6 +792,7 @@ void regulator::init_position()
 
 	hedge_positions();
 };
+<<<<<<< HEAD
 
 void regulator::add_position()
 {	
@@ -743,6 +800,21 @@ void regulator::add_position()
 		iter_setmul != organizer_->get_result_map()->end();++iter_setmul ) {
         if(iter_setmul->second.get_flag()&mode_)
 			iter_setmul->second.set_result_multiple(1);
+=======
+//enum result_type_9 { HWHW = 0x100100, HWSH = 0x100010, HWAW = 0x100001, 
+//	                 SHHW = 0x010100, SHSH = 0x010010, SHAW = 0x010001, 
+//					 AWHW = 0x001100, AWSH = 0x001010, AWAW = 0x001001 };
+void regulator::add_all_position(bool is_all)
+{	
+	for(forecas_result_map::iterator iter_setmul = organizer_->get_result_map()->begin();
+		iter_setmul != organizer_->get_result_map()->end();++iter_setmul ) {
+		//if(!is_all && iter_setmul->second.get_flag()&away_win) 
+		//	continue;
+		if(!is_all && iter_setmul->second.get_flag()&0x001001) 
+			continue;
+
+		iter_setmul->second.set_result_multiple(1);
+>>>>>>> c7a79a088264fbd89248e956647b5c48b122f27d
 	}	
 };
 
