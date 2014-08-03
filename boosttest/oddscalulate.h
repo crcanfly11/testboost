@@ -13,12 +13,16 @@
 
 using namespace std;
 
-enum unit_price { lottery = 2, max_total_cost = 5000 };
+enum unit_price { lottery = 2, max_total_cost = 500 };
 enum team_odd_type { max_odds_type = 3 };
 enum play_type { win_draw_lost = 3 };
-enum play_mode { none_modem, portion_mode, whole_mode, manual_mode };
 enum result_type { host_win = 0x01, shake_hand = 0x10, away_win = 0x100,  };
-
+//0x1000 = 4096, 0x0100 = 256, 0x0010 = 16, 0x0001 = 1;
+//0x11000 = 4096 why?  64bit?
+enum result_type_9 { HWHW = 1,  HWSH = 2,   HWAW = 4,
+                     SHHW = 8,  SHSH = 16,  SHAW = 32,
+                     AWHW = 64, AWSH = 128, AWAW = 256 };
+enum play_mode { none_modem, portion_mode, whole_mode, manual_mode };
 //-----------------------------------------------------------------------
 
 class fixtures_base_odds
@@ -97,6 +101,7 @@ class organizer
 	unsigned short index_;
 
 	base_odds_vector base_odds_;
+	forecas_result_map forecas_base_results_;
 	forecas_result_map forecas_results_;
 
 	position* position_;
@@ -108,6 +113,7 @@ public:
     
 	forecas_result_map* get_result_map() { return &forecas_results_; }
 	position* get_position() { return position_; }
+    regulator* get_regulator() { return regulator_; }
 
 	void init();
 
@@ -121,8 +127,9 @@ private:
     void set_forecas_result_map(fixtures_base_odds first, fixtures_base_odds second);
 	void result_msg(int first, int second);
 	const char* msg_type(int index);
-	short flag_type(int index);
+	int flag_type(int index);
 	int check_odds();
+    void execution(short mode);
 };
 
 //-----------------------------------------------------------------------
@@ -167,7 +174,6 @@ class optimization_result
 {
 	double max_min_yield_;
 	unsigned int min_idx;
-	unsigned int size_;
 
 	optimization_result_map optimization_results_;	
 	map<double, unsigned int> min_index_map_;
@@ -179,6 +185,9 @@ public:
 	
 	void optimization();
 	void clear();
+    
+    optimization_result_map* get_optimization_result_map() { return &optimization_results_; }
+    
 private:
 	unsigned int get_result_min_idx();
 	void print();
@@ -192,22 +201,29 @@ class regulator
 	double adjusted_income_;
 	double adjusted_yield_;
 
-	play_mode mode_;
+    bool is_overtop_;
+	//play_mode mode_;
+	short mode_;
+    
 	organizer* organizer_;
 
 public:
 	regulator(organizer* org);
 
+    void clear();
+    
 	void set_adjusted_min_income(double min_income);
 	void set_adjusted_min_yield(double min_yield);
-	void set_play_mode(play_mode mode);
-
-	void clear();
+//	void set_play_mode(play_mode mode);
+	void set_play_mode(int mode);
+    
+    bool isovertop() const { return is_overtop_; }
+    
 private:
 	void init_position();
 	void init_results(forecas_result& rpair);
 	void hedge_positions();
-	void add_all_position(bool is_all = true);
+	void add_position();
 	void adjust_positions(double value);
 };
 

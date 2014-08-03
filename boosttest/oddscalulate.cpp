@@ -135,29 +135,33 @@ void organizer::init()
 	if(check_odds() != 0) 
 		cout<< "don`t have zero in the odds."<< endl;
 
-	//cout<< "every case of results."<< endl;
-	//for_each(forecas_results_.begin(), forecas_results_.end(), 
-	//	boost::bind(&organizer::print, this, _1));
+//	cout<< "every case of results."<< endl;
+//	for_each(forecas_results_.begin(), forecas_results_.end(),
+//		boost::bind(&organizer::print, this, _1));
 	
 	position_ = new position(this);
 	regulator_ = new regulator(this);
+  	optimization_result_ = new optimization_result(this);
 
-	//cout<< "results of all case."<< endl;
-	//play_mode mode = whole_mode;   //whole_mode portion_mode
-	//regulator_->set_play_mode(mode);
-	//print();
-	
-	//cout<< "results that weed out  HW and AW"<< endl;
-	play_mode mode = portion_mode;   //whole_mode portion_mode
-	regulator_->set_play_mode(mode);
-	//print();
-	
-	//regulator_->set_adjusted_min_income(3);
-	//regulator_->set_adjusted_min_yield(50);
-
-	optimization_result_ = new optimization_result(this);
-	optimization_result_->optimization();
-
+    //play_mode mode;
+//	cout<< "results of all case."<< endl;
+//	regulator_->set_play_mode(HWHW|HWSH|HWAW|SHHW|SHSH|SHAW|AWHW|AWSH|AWAW);
+//	print();
+//    
+//	cout<< "results that weed out  HWHW,HWSH,SHHW,SHSH"<< endl;
+//	regulator_->set_play_mode(HWHW|HWSH|SHHW|SHSH);
+//	print();
+    
+//	cout<< "results that weed out  HWHW,HWSH,SHHW"<< endl;
+//	regulator_->set_play_mode(HWHW|HWSH|SHHW);
+//	print();
+    
+    
+    //输入
+    execution(HWHW|HWSH|SHHW|SHSH); //
+    //输出
+    
+    
 	////test
 	//while (true)
 	//{
@@ -176,6 +180,16 @@ void organizer::init()
 	//}
 };
 
+void organizer::execution(short mode)
+{
+    if(!forecas_results_.empty())
+        forecas_results_.clear();
+    
+    forecas_results_ = forecas_base_results_;
+	regulator_->set_play_mode(mode);
+	optimization_result_->optimization();
+};
+
 void organizer::clear()
 {
 	htwin_ = sh_ = atwin_ = 0;
@@ -187,6 +201,7 @@ void organizer::clear()
 	flag_ = 0x00;
 	index_ = 0;
 
+    forecas_base_results_.clear();
 	forecas_results_.clear();
 	base_odds_.clear();
 	
@@ -200,7 +215,8 @@ void organizer::print(forecas_result_pair rpair)
 	cout.setf(ios::fixed);
 	std::cout<< rpair.first<< ". "
 		<< rpair.second.get_result_msg()<< ": "
-		<< rpair.second.get_result_odds()<< endl;
+		<< rpair.second.get_result_odds()<< " flag:"
+        << rpair.second.get_flag()<< endl;
 };
 
 void organizer::print()
@@ -260,7 +276,7 @@ void organizer::set_forecas_result_map(fixtures_base_odds first, fixtures_base_o
 			forecas_result frt(((first[i])*(second[j])), ((1/first[i])*(1/second[j])*100), result_);
 			frt.set_flag(flag_);
 
-			forecas_results_.insert(forecas_result_pair(++index_, frt));
+			forecas_base_results_.insert(forecas_result_pair(++index_, frt));
 		}
 	}
 };
@@ -271,9 +287,8 @@ void organizer::result_msg(int first, int second)
 	strncat(result_, msg_type(first), sizeof(result_));
 	strncat(result_, msg_type(second), sizeof(result_));
 
-	flag_ = 0x00; 
-	flag_type(first);
-	flag_type(second);
+	flag_ = 0x00;
+    flag_type(2*first+(++second)+first);
 };
 
 const char* organizer::msg_type(int index) 
@@ -291,18 +306,30 @@ const char* organizer::msg_type(int index)
 	}
 };
 
-short organizer::flag_type(int index)
+int organizer::flag_type(int index)
 {
 	switch (index)
 	{
-	case 0:
-		return flag_ |= host_win;
-	case 1:
-		return flag_ |= shake_hand;
-	case 2:
-		return flag_ |= away_win;
-	default:
-		return 0;
+        case 1:
+            return flag_ = HWHW;
+        case 2:
+            return flag_ = HWSH;
+        case 3:
+            return flag_ = HWAW;
+        case 4:
+            return flag_ = SHHW;
+        case 5:
+            return flag_ = SHSH;
+        case 6:
+            return flag_ = SHAW;
+        case 7:
+            return flag_ = AWHW;
+        case 8:
+            return flag_ = AWSH;
+        case 9:
+            return flag_ = AWAW;
+        default:
+            return 0;
 	}
 };
 
@@ -380,7 +407,7 @@ int position::add_someone_position(unsigned int index)
 //-----------------------------------------------------------------------
 
 optimization_result::optimization_result(organizer* org) : 
-	max_min_yield_(0), organizer_(org), size_(0)
+	max_min_yield_(0), organizer_(org)
 {
 	//container can`t use memcpy as deep copy.
 	//memcpy(&optimization_forecas_results_, (organizer_->get_result_map()), sizeof(*organizer_->get_result_map()));
@@ -390,12 +417,14 @@ optimization_result::optimization_result(organizer* org) :
 	//for(iter_copy;iter_copy != organizer_->get_result_map()->end();++iter_copy) {
 	//	optimization_forecas_results_.insert(forecas_result_pair(iter_copy->first,iter_copy->second));
 	//}
-
-	size_ = organizer_->get_position()->get_real_size();
 };
 
 void optimization_result::optimization()
 {
+    if(organizer_->get_regulator()->isovertop()) return;
+    if(!optimization_results_.empty())
+        optimization_results_.clear();
+    
 	int min_idx = get_result_min_idx();
 
 	forecas_result_map::iterator iter_min = organizer_->get_result_map()->find(min_idx);
@@ -426,7 +455,6 @@ void optimization_result::clear()
 {
 	max_min_yield_ = 0;
 	min_idx = 0;
-	size_ = 0;
 
 	organizer_->get_result_map()->clear();
 	optimization_results_.clear();
@@ -439,7 +467,7 @@ void optimization_result::print_result()
 {
 	cout<< "-------------------------------------------------------------------"<< std::endl;
 	cout<<left <<setw(4) <<"ID" 
-		<<right <<setw(5) <<"Yield" <<"%"
+		<<right <<setw(7) <<"Yield" <<"%"
 		<<right <<setw(8) <<"Cost" <<"(Y)"  
 		<<right <<setw(8) <<"Winning" <<"%";
 	forecas_result_map::iterator iter_result = organizer_->get_result_map()->begin();
@@ -457,7 +485,7 @@ void optimization_result::print_result()
 
 			cout.setf(ios::fixed);
 			cout<< left<< setw(4)<< setprecision(0)<< ++cnt
-				<< right<< setw(5)<< setprecision(2)<< opair->first
+				<< right<< setw(7)<< setprecision(2)<< opair->first
 				<< right<< setw(9)<< setprecision(2)<< iter_result->second.get_total_cost()
 				<< right<< setw(11)<< setprecision(2)<< organizer_->get_position()->get_winning_probability()
 				<< right<< setw(1) <<" ";
@@ -516,7 +544,7 @@ void optimization_result::print()
 //-----------------------------------------------------------------------
 
 regulator::regulator(organizer* org) : 
-	adjusted_income_(0), adjusted_yield_(0), organizer_(org), mode_(none_modem)
+	adjusted_income_(0), adjusted_yield_(0), is_overtop_(false), organizer_(org), mode_(none_modem)
 {	
 };
 
@@ -524,6 +552,8 @@ void regulator::clear()
 {
 	adjusted_income_ = 0;
 	adjusted_yield_ = 0;
+    is_overtop_ = false;
+    mode_ = none_modem;
 	organizer_ = NULL;	
 };
 
@@ -553,8 +583,10 @@ void regulator::hedge_positions()
 		if(break_cnt == map_size) 
 			break;
 
-		if(max_total_cost < organizer_->get_position()->get_cost()) 
+		if(max_total_cost < organizer_->get_position()->get_cost()) {
+            is_overtop_ = true;
 			break;
+        }
 	}
 };
 
@@ -663,7 +695,7 @@ void regulator::adjust_positions(double value)
 	}
 }
 
-void regulator::set_play_mode(play_mode mode)
+void regulator::set_play_mode(int mode)
 {
 	//using this
 	//for_each(organizer_->get_result_map()->begin(), organizer_->get_result_map()->end(), 
@@ -685,16 +717,7 @@ void regulator::set_play_mode(play_mode mode)
 
 void regulator::init_position()
 {
-	if(mode_ == whole_mode) {
-		add_all_position();
-	}
-	else if(mode_ == portion_mode) {
-		add_all_position(false);
-	}
-	else if(mode_ == manual_mode)
-	{
-	
-	}
+    add_position();
 
 	int real_size=0;
 	double winning_probability=0;
@@ -714,14 +737,12 @@ void regulator::init_position()
 	hedge_positions();
 };
 
-void regulator::add_all_position(bool is_all)
+void regulator::add_position()
 {	
 	for(forecas_result_map::iterator iter_setmul = organizer_->get_result_map()->begin();
 		iter_setmul != organizer_->get_result_map()->end();++iter_setmul ) {
-		if(!is_all && iter_setmul->second.get_flag()&away_win) 
-			continue;
-
-		iter_setmul->second.set_result_multiple(1);
+        if(iter_setmul->second.get_flag()&mode_)
+			iter_setmul->second.set_result_multiple(1);
 	}	
 };
 
